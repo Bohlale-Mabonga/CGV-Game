@@ -19,3 +19,34 @@ body {
   width: 100%;
   height: 100%;
 }
+
+.hud {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  color: white;
+  font-size: 16px;
+  line-height: 1.5;
+  background: rgba(0, 0, 0, 0.55);
+  padding: 12px 14px;
+  border: 1px solid rgba(55, 200, 255, 0.45);
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+.hud-objective {
+  font-weight: bold;
+}
+
+.hud-keycards {
+  color: #37c8ff;
+}
+
+.hud-message {
+  margin-top: 6px;
+  color: #f5d76e;
+}
+
+.hud-timer {
+  color: #ff9f43;
+}
