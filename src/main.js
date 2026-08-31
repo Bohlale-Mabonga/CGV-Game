@@ -1,136 +1,61 @@
-import * as THREE from 'three'
-import './style.css'
+import * as THREE from 'three';
+import { PlayerControls } from './player/controls.js';
+import { createCorridorSegment } from './world/corridor.js';
+import { createFlashlight } from './lights/flashlight.js';
+import { createKeycard, createDoor } from './world/interactables.js';
+import { InteractionSystem } from './player/interaction-system.js';
+import { ObjectiveTracker } from './game/objectives.js';
 
-// --------------------------------------------------
-// Scene
-// --------------------------------------------------
-
-const scene = new THREE.Scene()
-
-scene.background = new THREE.Color(0x101018)
-
-// --------------------------------------------------
-// Camera
-// --------------------------------------------------
+//Scene setup
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x000000);
 
 const camera = new THREE.PerspectiveCamera(
-  75,
+  70,
   window.innerWidth / window.innerHeight,
   0.1,
-  1000
-)
+  100
+);
+camera.position.set(0, 1.6, 4);
 
-camera.position.set(0, 2, 5)
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
-// --------------------------------------------------
-// Renderer
-// --------------------------------------------------
+scene.add(new THREE.AmbientLight(0xffffff, 0.6));
 
-const renderer = new THREE.WebGLRenderer({
-  antialias: true
-})
+//Corridor
+const corridor = createCorridorSegment(20, 4, 3);
+corridor.position.z = -6;
+scene.add(corridor);
 
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-renderer.setSize(window.innerWidth, window.innerHeight)
+//Flashlight
+createFlashlight(camera);
 
-renderer.shadowMap.enabled = true
-renderer.shadowMap.type = THREE.PCFSoftShadowMap
+//Player movement
+const controls = new PlayerControls(camera, renderer.domElement);
 
-document.querySelector('#app').appendChild(renderer.domElement)
+const objectiveTracker = new ObjectiveTracker(3);
+const interactionSystem = new InteractionSystem(camera, scene, objectiveTracker);
 
-// --------------------------------------------------
-// Lighting
-// --------------------------------------------------
-
-const ambientLight = new THREE.AmbientLight(
-  0xffffff,
-  0.5
-)
-
-scene.add(ambientLight)
-
-const directionalLight = new THREE.DirectionalLight(
-  0xffffff,
-  1
-)
-
-directionalLight.position.set(5, 10, 5)
-directionalLight.castShadow = true
-
-scene.add(directionalLight)
-
-// --------------------------------------------------
-// Test objects
-// --------------------------------------------------
-
-const cubeGeometry = new THREE.BoxGeometry(1, 1, 1)
-
-const cubeMaterial = new THREE.MeshStandardMaterial({
-  color: 0x4488ff
-})
-
-const cube = new THREE.Mesh(
-  cubeGeometry,
-  cubeMaterial
-)
-
-cube.castShadow = true
-cube.position.y = 1
-
-scene.add(cube)
-
-// Ground
-
-const groundGeometry = new THREE.PlaneGeometry(
-  20,
-  20
-)
-
-const groundMaterial = new THREE.MeshStandardMaterial({
-  color: 0x333333
-})
-
-const ground = new THREE.Mesh(
-  groundGeometry,
-  groundMaterial
-)
-
-ground.rotation.x = -Math.PI / 2
-ground.receiveShadow = true
-
-scene.add(ground)
-
-// --------------------------------------------------
-// Resize handling
-// --------------------------------------------------
+interactionSystem.register(createKeycard(new THREE.Vector3(-1, 1, -4)));
+interactionSystem.register(createKeycard(new THREE.Vector3(1, 1, -10)));
+interactionSystem.register(createKeycard(new THREE.Vector3(0, 1, -14)));
+interactionSystem.register(createDoor(new THREE.Vector3(0, 1.1, -16)));
 
 window.addEventListener('resize', () => {
-  camera.aspect =
-    window.innerWidth / window.innerHeight
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
 
-  camera.updateProjectionMatrix()
-
-  renderer.setSize(
-    window.innerWidth,
-    window.innerHeight
-  )
-})
-
-// --------------------------------------------------
-// Game loop
-// --------------------------------------------------
-
-const clock = new THREE.Clock()
-
+const clock = new THREE.Clock();
 function animate() {
-  requestAnimationFrame(animate)
-
-  const delta = clock.getDelta()
-
-  cube.rotation.x += delta
-  cube.rotation.y += delta
-
-  renderer.render(scene, camera)
+  requestAnimationFrame(animate);
+  const delta = clock.getDelta();
+  controls.update(delta);
+  interactionSystem.update();  
+  renderer.render(scene, camera);
 }
+animate();
 
-animate()
