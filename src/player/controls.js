@@ -8,6 +8,8 @@ export class PlayerControls {
     this.moveSpeed = 3.5;
     this.lookSpeed = 0.0025;
 
+    this.bounds = null;
+
     this.keys = {
       forward: false,
       back: false,
@@ -29,6 +31,10 @@ export class PlayerControls {
     document.addEventListener('pointerlockchange', () => {
       this.isLocked = document.pointerLockElement === domElement;
     });
+  }
+
+  setBounds(bounds) {
+    this.bounds = bounds;
   }
 
   _onKeyDown(e) {
@@ -61,6 +67,22 @@ export class PlayerControls {
     this.camera.quaternion.setFromEuler(this.euler);
   }
 
+  _applyBounds() {
+    if (!this.bounds) return;
+
+    this.camera.position.x = THREE.MathUtils.clamp(
+      this.camera.position.x,
+      this.bounds.minX,
+      this.bounds.maxX
+    );
+
+    this.camera.position.z = THREE.MathUtils.clamp(
+      this.camera.position.z,
+      this.bounds.minZ,
+      this.bounds.maxZ
+    );
+  }
+
   update(delta) {
     const speed = this.moveSpeed * delta;
 
@@ -76,5 +98,7 @@ export class PlayerControls {
     if (this.keys.back) this.camera.position.addScaledVector(forward, -speed);
     if (this.keys.left) this.camera.position.addScaledVector(right, -speed);
     if (this.keys.right) this.camera.position.addScaledVector(right, speed);
+
+    this._applyBounds();
   }
 }

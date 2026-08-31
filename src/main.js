@@ -10,6 +10,30 @@ import { createKeycard, createDoor } from './world/interactables.js';
 import { ObjectiveTracker } from './game/objectives.js';
 import { createFlashlight } from './lights/flashlight.js';
 import { HUD } from './ui/hud.js';
+import { createSteamVent, checkSteamVentHit } from './world/steam-vent.js';
+import {
+  createPowerJunction,
+  createReactorConsole,
+  updatePowerPuzzle,
+  resetPowerPuzzle
+} from './world/power-puzzle.js';
+
+import { createControlRoom } from './world/control-room.js';
+import {
+  createSecurityBeam,
+  checkSecurityBeamHit
+} from './world/security-beam.js';
+
+import { LevelTimer } from './game/level2-timer.js';
+
+import { createReactorCore, checkCoreReached } from './world/reactor-core.js';
+
+import {
+  createCollapseSequence,
+  updateCollapseSequence,
+  checkCollapseHit,
+  resetCollapseSequence
+} from './world/collapse-sequence.js';
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x111111);
@@ -45,9 +69,17 @@ scene.add(corridor);
 createFlashlight(camera);
 
 const controls = new PlayerControls(camera, renderer.domElement);
+controls.setBounds({
+  minX: -1.75,
+  maxX: 1.75,
+  minZ: -42,
+  maxZ: 6
+});
 
 const objectiveTracker = new ObjectiveTracker(3);
 const hud = new HUD(objectiveTracker);
+const level2Timer = new LevelTimer(60);
+hud.setLevelTimer(level2Timer);
 
 const interactionSystem = new InteractionSystem(
   camera,
@@ -61,6 +93,62 @@ interactionSystem.register(createKeycard(new THREE.Vector3(1, 1, -9)));
 interactionSystem.register(createKeycard(new THREE.Vector3(0, 1, -13)));
 
 interactionSystem.register(createDoor(new THREE.Vector3(0, 1.1, -16)));
+
+const checkpointPosition = new THREE.Vector3(0, 1.6, 6);
+
+const steamVents = [
+  createSteamVent(new THREE.Vector3(0, 0, -6.5))
+];
+
+for (const vent of steamVents) {
+  scene.add(vent);
+}
+const powerJunctions = [
+  createPowerJunction(new THREE.Vector3(-2, 1.4, -26), 1),
+  createPowerJunction(new THREE.Vector3(0, 1.4, -26), 2),
+  createPowerJunction(new THREE.Vector3(2, 1.4, -26), 3)
+];
+
+const reactorConsole = createReactorConsole(
+  new THREE.Vector3(0, 0.8, -23)
+);
+const controlRoom = createControlRoom(new THREE.Vector3(0, 0, -22));
+scene.add(controlRoom);
+
+for (const junction of powerJunctions) {
+  interactionSystem.register(junction);
+}
+
+const level2CheckpointPosition = new THREE.Vector3(0, 1.6, -19);
+
+const securityBeams = [
+  createSecurityBeam(new THREE.Vector3(0, 0, -23))
+];
+
+for (const beam of securityBeams) {
+  scene.add(beam);
+}
+
+const meltdownCorridor = createCorridorSegment(18, 4, 3);
+meltdownCorridor.position.z = -34;
+scene.add(meltdownCorridor);
+
+const reactorCore = createReactorCore(new THREE.Vector3(0, 1.5, -42));
+scene.add(reactorCore);
+
+const level3Timer = new LevelTimer(45);
+let gameOver = false;
+
+scene.add(reactorConsole);
+
+const level3CheckpointPosition = new THREE.Vector3(0, 1.6, -30);
+const collapseChunks = createCollapseSequence();
+
+for (const chunk of collapseChunks) {
+  scene.add(chunk);
+}
+
+let collapseStarted = false;
 
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -77,7 +165,99 @@ function animate() {
   const delta = clock.getDelta();
 
   controls.update(delta);
-  interactionSystem.update();
+  interactionSystem.update(delta);
+
+  for (const vent of steamVents) {
+    vent.userData.update(delta);
+  }
+
+  const wasHitBySteam = checkSteamVentHit(
+    camera,
+    steamVents,
+    checkpointPosition
+  );
+
+  if (wasHitBySteam) {
+    hud.setMessage('Steam vent hit you - returned to checkpoint');
+  }
+
+  updatePowerPuzzle(powerJunctions, reactorConsole);
+
+  for (const beam of securityBeams) {
+    beam.userData.update(delta);
+  }
+
+  const wasHitByBeam = checkSecurityBeamHit(
+    camera,
+    securityBeams,
+    level2CheckpointPosition
+  );
+
+  if (wasHitByBeam) {
+    hud.setMessage('Security beam hit you - returned to control room entrance');
+  }
+
+  level2Timer.update(delta);
+
+  const isPuzzleComplete = updatePowerPuzzle(powerJunctions, reactorConsole);
+
+  if (isPuzzleComplete) {
+    level2Timer.stop();
+  }
+
+  if (level2Timer.isFinished() && !reactorConsole.userData.isComplete) {
+    camera.position.copy(level2CheckpointPosition);
+    resetPowerPuzzle(powerJunctions, reactorConsole);
+    level2Timer.reset();
+    hud.setMessage('Timer expired - puzzle reset');
+  }
+
+  hud.update();
+
+  if (!gameOver) {
+    reactorCore.userData.update(delta);
+
+    const playerInLevel3 = camera.position.z < -30;
+
+    if (playerInLevel3) {
+      collapseStarted = true;
+    }
+
+    if (playerInLevel3 && !reactorCore.userData.isSealed) {
+      level3Timer.update(delta);
+
+      hud.setMessage(`Meltdown Timer: ${level3Timer.getDisplayTime()}s`);
+
+      updateCollapseSequence(collapseChunks, delta, collapseStarted);
+
+      const wasHitByCollapse = checkCollapseHit(
+        camera,
+        collapseChunks,
+        level3CheckpointPosition
+      );
+
+      if (wasHitByCollapse) {
+        collapseStarted = false;
+        resetCollapseSequence(collapseChunks);
+        level3Timer.reset();
+        hud.setMessage('Corridor collapsed - returned to Level 3 entrance');
+      }
+
+      if (checkCoreReached(camera, reactorCore)) {
+        reactorCore.userData.seal();
+        level3Timer.stop();
+        gameOver = true;
+        hud.setMessage('Core sealed - station saved');
+      }
+
+      if (level3Timer.isFinished()) {
+        gameOver = true;
+        hud.setMessage('Meltdown - station lost');
+        console.log('Meltdown - station lost');
+      }
+    }
+  }
+  interactionSystem.update(delta);
 
   renderer.render(scene, camera);
 }

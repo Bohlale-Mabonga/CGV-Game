@@ -21,5 +21,12 @@ export function createFlashlight(camera) {
 
   camera.add(light);
 
+  document.addEventListener('keydown', (e) => {
+    if (e.code === 'KeyF') {
+      light.visible = !light.visible;
+      console.log(`Flashlight ${light.visible ? 'on' : 'off'}`);
+    }
+  });
+
   return light;
 }
