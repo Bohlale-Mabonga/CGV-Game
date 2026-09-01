@@ -77,6 +77,7 @@ export function createDoor(position) {
     if (objectiveTracker.isObjectiveComplete()) {
       mesh.userData.isOpen = true;
       mesh.position.y += 2.2;
+      mesh.userData.ignoreCollision = true;
       console.log('Door opened - objective complete!');
     } else {
       console.log('Door locked - find the remaining keycards first.');
