@@ -1,4 +1,4 @@
-# CGV Game
+ # CGV Game
 
 A 3D browser game developed for the Computer Graphics and Visualisation
 group project at the University of the Witwatersrand.
