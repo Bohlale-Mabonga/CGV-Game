@@ -9,9 +9,26 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@types/node": "^26.4.0",
     "vite": "^8.2.0"
   },
   "dependencies": {
     "three": "^0.185.1"
-  }
+  },
+  "description": "A 3D browser game developed for the Computer Graphics and Visualisation\r group project at the University of the Witwatersrand.",
+  "main": "vite.config.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Bohlale-Mabonga/CGV-Game.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Bohlale-Mabonga/CGV-Game/issues"
+  },
+  "homepage": "https://github.com/Bohlale-Mabonga/CGV-Game#readme"
 }
