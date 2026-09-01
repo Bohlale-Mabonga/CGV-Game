@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+// flashlight
 
 export function createFlashlight(camera) {
   const light = new THREE.SpotLight(
