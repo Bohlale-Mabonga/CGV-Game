@@ -9,6 +9,8 @@ export class PlayerControls {
     this.lookSpeed = 0.0025;
 
     this.bounds = null;
+    this.collisionRadius = 0.35;
+    this.obstacles = [];
 
     this.keys = {
       forward: false,
@@ -35,6 +37,10 @@ export class PlayerControls {
 
   setBounds(bounds) {
     this.bounds = bounds;
+  }
+
+  setObstacles(obstacles) {
+    this.obstacles = obstacles;
   }
 
   _onKeyDown(e) {
@@ -83,6 +89,36 @@ export class PlayerControls {
     );
   }
 
+  _collidesWithObstacle(position) {
+    for (const obstacle of this.obstacles) {
+      if (obstacle.userData.ignoreCollision) continue;
+
+      const box = new THREE.Box3().setFromObject(obstacle);
+
+      const closestPoint = box.clampPoint(position, new THREE.Vector3());
+      const distance = closestPoint.distanceTo(position);
+
+      if (distance < this.collisionRadius) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  _tryMove(moveVector) {
+    if (moveVector.lengthSq() === 0) return;
+
+    const originalPosition = this.camera.position.clone();
+
+    this.camera.position.add(moveVector);
+    this._applyBounds();
+
+    if (this._collidesWithObstacle(this.camera.position)) {
+      this.camera.position.copy(originalPosition);
+    }
+  }
+
   update(delta) {
     const speed = this.moveSpeed * delta;
 
@@ -94,11 +130,9 @@ export class PlayerControls {
     const right = new THREE.Vector3();
     right.crossVectors(forward, this.camera.up).normalize();
 
-    if (this.keys.forward) this.camera.position.addScaledVector(forward, speed);
-    if (this.keys.back) this.camera.position.addScaledVector(forward, -speed);
-    if (this.keys.left) this.camera.position.addScaledVector(right, -speed);
-    if (this.keys.right) this.camera.position.addScaledVector(right, speed);
-
-    this._applyBounds();
+    if (this.keys.forward) this._tryMove(forward.clone().multiplyScalar(speed));
+    if (this.keys.back) this._tryMove(forward.clone().multiplyScalar(-speed));
+    if (this.keys.left) this._tryMove(right.clone().multiplyScalar(-speed));
+    if (this.keys.right) this._tryMove(right.clone().multiplyScalar(speed));
   }
 }

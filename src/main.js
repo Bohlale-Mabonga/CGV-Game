@@ -35,6 +35,8 @@ import {
   resetCollapseSequence
 } from './world/collapse-sequence.js';
 
+import { createLevel1Props } from './world/level1-props.js';
+
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x111111);
 
@@ -65,7 +67,15 @@ scene.add(debugLight);
 const corridor = createCorridorSegment(22, 4, 3);
 corridor.position.z = -6;
 scene.add(corridor);
+const collisionObjects = [];
+const level1Props = createLevel1Props();
 
+for (const prop of level1Props.props) {
+  scene.add(prop);
+  if (prop.userData.type === 'crate') {
+    collisionObjects.push(prop);
+  }
+}
 createFlashlight(camera);
 
 const controls = new PlayerControls(camera, renderer.domElement);
@@ -75,6 +85,8 @@ controls.setBounds({
   minZ: -42,
   maxZ: 6
 });
+
+controls.setObstacles(collisionObjects);
 
 const objectiveTracker = new ObjectiveTracker(3);
 const hud = new HUD(objectiveTracker);
@@ -92,8 +104,9 @@ interactionSystem.register(createKeycard(new THREE.Vector3(-1, 1, -4)));
 interactionSystem.register(createKeycard(new THREE.Vector3(1, 1, -9)));
 interactionSystem.register(createKeycard(new THREE.Vector3(0, 1, -13)));
 
-interactionSystem.register(createDoor(new THREE.Vector3(0, 1.1, -16)));
-
+const level1Door = createDoor(new THREE.Vector3(0, 1.1, -16));
+interactionSystem.register(level1Door);
+collisionObjects.push(level1Door);
 const checkpointPosition = new THREE.Vector3(0, 1.6, 6);
 
 const steamVents = [
@@ -149,6 +162,8 @@ for (const chunk of collapseChunks) {
 }
 
 let collapseStarted = false;
+
+
 
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -258,6 +273,9 @@ function animate() {
     }
   }
   interactionSystem.update(delta);
+  for (const prop of level1Props.animatedProps) {
+    prop.userData.update(delta);
+  }
 
   renderer.render(scene, camera);
 }
