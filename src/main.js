@@ -67,53 +67,54 @@ debugLight.position.set(3, 6, 4);
 scene.add(debugLight);
 
 const loader = new GLTFLoader();
+const load = (url) =>
+  new Promise((res) => loader.load(url, (gltf) => res(gltf.scene)));
 
-loader.load("assets/straight-corridor.glb", (gltf) => {
-  const corridor = gltf.scene;
-  corridor.position.z = 0;
-  scene.add(corridor);
-});
+async function buildLevel() {
+  const [straight, xCorridor, office] = await Promise.all([
+    load("assets/straight-corridor.glb"),
+    load("assets/x-corridor.glb"),
+    load("assets/office.glb"),
+  ]);
 
-loader.load("assets/x-corridor.glb", (gltf) => {
-  const corridor = gltf.scene;
-  corridor.position.z = 0;
-  scene.add(corridor);
-});
+  // 1. Straight
+  const s1 = straight.clone();
+  s1.position.z = 0;
+  scene.add(s1);
 
-loader.load("assets/x-corridor.glb", (gltf) => {
-  const corridor = gltf.scene;
-  corridor.position.z = -9;
-  scene.add(corridor);
-});
+  // 2. X-intersections
+  const x1 = xCorridor.clone();
+  x1.position.z = 0;
+  scene.add(x1);
 
-// Add offices at the end of the x-corridors
-loader.load("assets/office.glb", (gltf) => {
-  const office = gltf.scene;
-  office.position.set(-8, 0, -10);
-  scene.add(office);
-});
+  const x2 = xCorridor.clone();
+  x2.position.z = -9;
+  scene.add(x2);
 
-loader.load("assets/office.glb", (gltf) => {
-  const office = gltf.scene;
-  office.position.set(8, 0, -10);
-  // Rotate the office 180 degrees along the y-axis to face the corridor
-  office.rotation.y = Math.PI;
-  scene.add(office);
-});
+  // 3. Offices
+  const o1 = office.clone();
+  o1.position.set(-8, 0, -10);
+  scene.add(o1);
 
-loader.load("assets/office.glb", (gltf) => {
-  const office = gltf.scene;
-  office.position.set(-8, 0, -19);
-  scene.add(office);
-});
+  const o2 = office.clone();
+  o2.position.set(8, 0, -10);
+  o2.rotation.y = Math.PI;
+  scene.add(o2);
 
-loader.load("assets/office.glb", (gltf) => {
-  const office = gltf.scene;
-  office.position.set(8, 0, -19);
-  // Rotate the office 180 degrees along the y-axis to face the corridor
-  office.rotation.y = Math.PI;
-  scene.add(office);
-});
+  const o3 = office.clone();
+  o3.position.set(-8, 0, -19);
+  scene.add(o3);
+
+  const o4 = office.clone();
+  o4.position.set(8, 0, -19);
+  o4.rotation.y = Math.PI;
+  scene.add(o4);
+
+  // Now you can add bounds HERE, everything is placed
+  console.log("Level built");
+}
+
+buildLevel();
 
 // const corridor = createCorridorSegment(22, 4, 3);
 // corridor.position.z = -6;
