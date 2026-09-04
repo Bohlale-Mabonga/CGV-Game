@@ -35,12 +35,26 @@ export function createSign(text, position, rotationY = 0, options = {}) {
     });
 
     const sign = new THREE.Mesh(
-        new THREE.PlaneGeometry(options.widthWorld || 1.8, options.heightWorld || 0.45),
+        new THREE.PlaneGeometry(
+            options.widthWorld || 1.8,
+            options.heightWorld || 0.45
+        ),
         material
     );
 
     sign.position.copy(position);
     sign.rotation.y = rotationY;
+
+    sign.userData.setText = (newText, newOptions = {}) => {
+        const nextTexture = createTextTexture(newText, {
+            ...options,
+            ...newOptions
+        });
+
+        sign.material.map.dispose();
+        sign.material.map = nextTexture;
+        sign.material.needsUpdate = true;
+    };
 
     return sign;
 }
