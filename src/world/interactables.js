@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 
+import { createSign } from './signage.js';
+
 export function createKeycard(position) {
   const group = new THREE.Group();
   group.position.copy(position);
@@ -73,13 +75,46 @@ export function createDoor(position) {
   scannerLight.position.set(0.75, 0.25, 0.2);
   mesh.add(scannerLight);
 
+  const counterSign = createSign(
+    '0 / 3',
+    new THREE.Vector3(0, 0.55, 0.09),
+    0,
+    {
+      widthWorld: 0.75,
+      heightWorld: 0.25,
+      width: 512,
+      height: 180,
+      fontSize: 70,
+      border: '#ff3344',
+      color: '#ffdddd',
+      background: '#140808'
+    }
+  );
+  mesh.add(counterSign);
+
   mesh.userData.interactable = true;
   mesh.userData.type = 'door';
   mesh.userData.highlightTarget = mesh;
   mesh.userData.isOpen = false;
   mesh.userData.isUnlocked = false;
+  mesh.userData.lastKeycardCount = -1;
 
   mesh.userData.update = (objectiveTracker) => {
+    if (mesh.userData.lastKeycardCount !== objectiveTracker.keycardsCollected) {
+      mesh.userData.lastKeycardCount = objectiveTracker.keycardsCollected;
+
+      const isComplete = objectiveTracker.isObjectiveComplete();
+
+      counterSign.userData.setText(
+        `${objectiveTracker.keycardsCollected} / ${objectiveTracker.requiredKeycards}`,
+        {
+          border: isComplete ? '#37ff8b' : '#ff3344',
+          color: isComplete ? '#ddffea' : '#ffdddd',
+          background: isComplete ? '#061b10' : '#140808'
+        }
+      );
+    }
+
     if (!mesh.userData.isOpen && objectiveTracker.isObjectiveComplete()) {
       mesh.userData.isUnlocked = true;
       mesh.material = unlockedMaterial;
