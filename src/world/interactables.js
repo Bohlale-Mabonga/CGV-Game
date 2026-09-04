@@ -22,6 +22,7 @@ export function createKeycard(position) {
 
   group.userData.interactable = true;
   group.userData.type = 'keycard';
+  group.userData.highlightTarget = card;
   group.userData.baseY = position.y;
 
   group.userData.update = (objectiveTracker, delta) => {
@@ -59,8 +60,22 @@ export function createDoor(position) {
 
   mesh.position.copy(position);
 
+  const scanner = new THREE.Mesh(
+    new THREE.BoxGeometry(0.18, 0.35, 0.04),
+    new THREE.MeshBasicMaterial({
+      color: 0xff3344
+    })
+  );
+  scanner.position.set(0.75, 0.25, 0.1);
+  mesh.add(scanner);
+
+  const scannerLight = new THREE.PointLight(0xff3344, 1, 2);
+  scannerLight.position.set(0.75, 0.25, 0.2);
+  mesh.add(scannerLight);
+
   mesh.userData.interactable = true;
   mesh.userData.type = 'door';
+  mesh.userData.highlightTarget = mesh;
   mesh.userData.isOpen = false;
   mesh.userData.isUnlocked = false;
 
@@ -68,6 +83,8 @@ export function createDoor(position) {
     if (!mesh.userData.isOpen && objectiveTracker.isObjectiveComplete()) {
       mesh.userData.isUnlocked = true;
       mesh.material = unlockedMaterial;
+      scanner.material.color.set(0x37ff8b);
+      scannerLight.color.set(0x37ff8b);
     }
   };
 
@@ -76,8 +93,8 @@ export function createDoor(position) {
 
     if (objectiveTracker.isObjectiveComplete()) {
       mesh.userData.isOpen = true;
-      mesh.position.y += 2.2;
       mesh.userData.ignoreCollision = true;
+      mesh.position.y += 2.2;
       console.log('Door opened - objective complete!');
     } else {
       console.log('Door locked - find the remaining keycards first.');
