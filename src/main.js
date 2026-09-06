@@ -70,12 +70,7 @@ const loader = new GLTFLoader();
 const load = (url) =>
   new Promise((res) => loader.load(url, (gltf) => res(gltf.scene)));
 
-function setBounds(obj, width, depth) {
-  // store local bounds for collision later
-  obj.userData.halfW = width / 2;
-  obj.userData.halfD = depth / 2;
-  // for later: obj.userData.boundsMinX = obj.position.x - halfW etc.
-}
+let rooms = []; // store all walkable rooms
 
 async function buildLevel() {
   const [straight, xCorridor, office] = await Promise.all([
@@ -84,51 +79,63 @@ async function buildLevel() {
     load("assets/office.glb"),
   ]);
 
+  // straight: 2m wide, 6m long
   const s1 = straight.clone();
-  s1.position.z = 0;
-  setBounds(s1, 6, 10);
+  s1.position.set(0, 0, 0);
+  s1.userData = { halfW: 2 / 2, halfD: 6 / 2 };
   scene.add(s1);
 
   const x1 = xCorridor.clone();
-  x1.position.z = 0;
-  setBounds(x1, 6, 10); // x-corridor is wider at intersection
+  x1.position.set(0, 0, -6);
+  x1.userData = { shape: "cross", halfW: 6 / 2, halfD: 10 / 2, armHalf: 1 }; // armHalf = half-thickness of each arm (2m wide / 2)
   scene.add(x1);
 
   const x2 = xCorridor.clone();
-  x2.position.z = -9;
-  setBounds(x2, 6, 10);
+  x2.position.set(0, 0, -16);
+  x2.userData = { shape: "cross", halfW: 6 / 2, halfD: 10 / 2, armHalf: 1 };
   scene.add(x2);
 
+  // offices: 4m wide (X) and 6m deep
   const o1 = office.clone();
-  o1.position.set(-8, 0, -10);
-  setBounds(o1, 4, 8);
+  o1.position.set(-5, 0, -6);
+  o1.userData = { halfW: 4 / 2, halfD: 4 / 2 };
   scene.add(o1);
 
   const o2 = office.clone();
-  o2.position.set(8, 0, -10);
+  o2.position.set(5, 0, -6);
   o2.rotation.y = Math.PI;
-  setBounds(o2, 4, 8);
+  o2.userData = { halfW: 4 / 2, halfD: 4 / 2 };
   scene.add(o2);
 
   const o3 = office.clone();
-  o3.position.set(-8, 0, -19);
-  setBounds(o3, 4, 8);
+  o3.position.set(-5, 0, -16);
+  o3.userData = { halfW: 4 / 2, halfD: 4 / 2 };
   scene.add(o3);
 
   const o4 = office.clone();
-  o4.position.set(8, 0, -19);
+  o4.position.set(5, 0, -16);
   o4.rotation.y = Math.PI;
-  setBounds(o4, 4, 8);
+  o4.userData = { halfW: 4 / 2, halfD: 4 / 2 };
   scene.add(o4);
 
-  // Example check for player
+  rooms = [s1, x1, x2, o1, o2, o3, o4];
+
   window.isInsideAnyRoom = (px, pz) => {
-    for (let room of [s1, x1, x2, o1, o2, o3, o4]) {
-      const dx = Math.abs(px - room.position.x);
-      const dz = Math.abs(pz - room.position.z);
-      if (dx < room.userData.halfW && dz < room.userData.halfD) return true;
-    }
-    return false; // in wall
+    return rooms.some((r) => {
+      const dx = px - r.position.x;
+      const dz = pz - r.position.z;
+
+      if (r.userData.shape === "cross") {
+        const arm = r.userData.armHalf;
+        return (
+          (Math.abs(dx) < arm && Math.abs(dz) < r.userData.halfD) ||
+          (Math.abs(dz) < arm && Math.abs(dx) < r.userData.halfW)
+        );
+      }
+
+      // default: plain rectangle (straight corridor, offices)
+      return Math.abs(dx) < r.userData.halfW && Math.abs(dz) < r.userData.halfD;
+    });
   };
 }
 
@@ -150,12 +157,18 @@ const collisionObjects = [];
 createFlashlight(camera);
 
 const playercontrols = new PlayerControls(camera, renderer.domElement);
-playercontrols.setBounds({
-  minX: -9.8,
-  maxX: 9.8,
-  minZ: -42,
-  maxZ: -2,
-});
+
+const originalUpdate = playercontrols.update.bind(playercontrols);
+playercontrols.update = (delta) => {
+  const oldPos = camera.position.clone();
+  originalUpdate(delta);
+  if (
+    window.isInsideAnyRoom &&
+    !window.isInsideAnyRoom(camera.position.x, camera.position.z)
+  ) {
+    camera.position.copy(oldPos); // hit wall, revert
+  }
+};
 
 playercontrols.setObstacles(collisionObjects);
 
@@ -171,9 +184,9 @@ const interactionSystem = new InteractionSystem(
   hud,
 );
 
-interactionSystem.register(createKeycard(new THREE.Vector3(-7.5, 0.5, -9.5)));
-interactionSystem.register(createKeycard(new THREE.Vector3(0.5, 0.5, -15)));
-interactionSystem.register(createKeycard(new THREE.Vector3(7.5, 0.5, -20.5)));
+interactionSystem.register(createKeycard(new THREE.Vector3(-5.5, 0.5, -7.5)));
+interactionSystem.register(createKeycard(new THREE.Vector3(0.5, 0.5, -13.5)));
+interactionSystem.register(createKeycard(new THREE.Vector3(3.5, 0.5, -14.5)));
 
 const level1Door = createDoor(new THREE.Vector3(0, 1.1, -24));
 interactionSystem.register(level1Door);
