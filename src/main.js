@@ -62,13 +62,20 @@ app.appendChild(renderer.domElement);
 
 scene.add(new THREE.AmbientLight(0xffffff, 1));
 
-const debugLight = new THREE.DirectionalLight(0xffffff, 2);
-debugLight.position.set(3, 6, 4);
-scene.add(debugLight);
+// const debugLight = new THREE.DirectionalLight(0xffffff, 2);
+// debugLight.position.set(3, 6, 4);
+// scene.add(debugLight);
 
 const loader = new GLTFLoader();
 const load = (url) =>
   new Promise((res) => loader.load(url, (gltf) => res(gltf.scene)));
+
+function setBounds(obj, width, depth) {
+  // store local bounds for collision later
+  obj.userData.halfW = width / 2;
+  obj.userData.halfD = depth / 2;
+  // for later: obj.userData.boundsMinX = obj.position.x - halfW etc.
+}
 
 async function buildLevel() {
   const [straight, xCorridor, office] = await Promise.all([
@@ -77,41 +84,52 @@ async function buildLevel() {
     load("assets/office.glb"),
   ]);
 
-  // 1. Straight
   const s1 = straight.clone();
   s1.position.z = 0;
+  setBounds(s1, 6, 10);
   scene.add(s1);
 
-  // 2. X-intersections
   const x1 = xCorridor.clone();
   x1.position.z = 0;
+  setBounds(x1, 6, 10); // x-corridor is wider at intersection
   scene.add(x1);
 
   const x2 = xCorridor.clone();
   x2.position.z = -9;
+  setBounds(x2, 6, 10);
   scene.add(x2);
 
-  // 3. Offices
   const o1 = office.clone();
   o1.position.set(-8, 0, -10);
+  setBounds(o1, 4, 8);
   scene.add(o1);
 
   const o2 = office.clone();
   o2.position.set(8, 0, -10);
   o2.rotation.y = Math.PI;
+  setBounds(o2, 4, 8);
   scene.add(o2);
 
   const o3 = office.clone();
   o3.position.set(-8, 0, -19);
+  setBounds(o3, 4, 8);
   scene.add(o3);
 
   const o4 = office.clone();
   o4.position.set(8, 0, -19);
   o4.rotation.y = Math.PI;
+  setBounds(o4, 4, 8);
   scene.add(o4);
 
-  // Now you can add bounds HERE, everything is placed
-  console.log("Level built");
+  // Example check for player
+  window.isInsideAnyRoom = (px, pz) => {
+    for (let room of [s1, x1, x2, o1, o2, o3, o4]) {
+      const dx = Math.abs(px - room.position.x);
+      const dz = Math.abs(pz - room.position.z);
+      if (dx < room.userData.halfW && dz < room.userData.halfD) return true;
+    }
+    return false; // in wall
+  };
 }
 
 buildLevel();
