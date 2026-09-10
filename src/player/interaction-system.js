@@ -1,5 +1,5 @@
 export class InteractionSystem {
-  constructor(camera, scene, objectiveTracker, hud, range = 2) {
+  constructor(camera, scene, objectiveTracker, hud, range = 2, getPlayerPosition) {
     this.camera = camera;
     this.scene = scene;
     this.objectiveTracker = objectiveTracker;
@@ -7,13 +7,17 @@ export class InteractionSystem {
     this.range = range;
     this.interactables = [];
     this.nearestInteractable = null;
+    this.lastPrompt = '';
+    this.getPlayerPosition = getPlayerPosition ?? (() => this.camera.position);
 
     document.addEventListener('keydown', (e) => {
-      if (e.code === 'KeyE' && this.nearestInteractable) {
-        this.nearestInteractable.userData.onInteract(
+      if (e.code === 'KeyE' && !e.repeat && this.nearestInteractable) {
+        const result = this.nearestInteractable.userData.onInteract(
           this.objectiveTracker,
           this.scene
         );
+
+        if (result?.message) this.hud.setMessage(result.message);
       }
     });
   }
@@ -26,7 +30,8 @@ export class InteractionSystem {
   update(delta) {
     this.nearestInteractable = null;
 
-    const playerPos = this.camera.position;
+    const playerPos = this.getPlayerPosition();
+    let nearestDistance = Infinity;
 
     for (const obj of [...this.interactables]) {
       if (obj.userData.update) {
@@ -43,20 +48,20 @@ export class InteractionSystem {
         this.interactables = this.interactables.filter((o) => o !== obj);
 
         this.hud.setMessage('Keycard collected');
-      } else if (
-        obj.userData.type === 'door' ||
-        obj.userData.type === 'junction'
-      ) {
+      } else if (obj.userData.interactable) {
+        if (dist >= nearestDistance) continue;
+
         this.nearestInteractable = obj;
+        nearestDistance = dist;
 
-        if (obj.userData.type === 'door') {
-          this.hud.setMessage('Press E to open door');
-        }
-
-        if (obj.userData.type === 'junction') {
-          this.hud.setMessage('Press E to toggle power junction');
+        const prompt = obj.userData.prompt || 'Press E to interact';
+        if (prompt !== this.lastPrompt) {
+          this.hud.setMessage(prompt);
+          this.lastPrompt = prompt;
         }
       }
     }
+
+    if (!this.nearestInteractable) this.lastPrompt = '';
   }
 }

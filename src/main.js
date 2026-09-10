@@ -41,7 +41,10 @@ import {
   resetCollapseSequence
 } from './world/collapse-sequence.js';
 
-import { createLevel1Props } from './world/level1-props.js';
+import {
+  createCheckpointBeacon,
+  createLevel1Props
+} from './world/level1-props.js';
 import { Minimap } from './ui/minimap.js';
 
 import { createSign } from './world/signage.js';
@@ -87,6 +90,7 @@ function createPlayerRobot() {
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x111111);
+scene.fog = new THREE.FogExp2(0x090d12, 0.035);
 
 const camera = new THREE.PerspectiveCamera(
   70,
@@ -102,17 +106,24 @@ scene.add(camera);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.95;
 
 const app = document.querySelector('#app');
 app.appendChild(renderer.domElement);
 
-scene.add(new THREE.AmbientLight(0xffffff, 1));
+scene.add(new THREE.AmbientLight(0x9fc9ff, 0.28));
 
-const debugLight = new THREE.DirectionalLight(0xffffff, 2);
+const debugLight = new THREE.DirectionalLight(0xbfdfff, 0.45);
 debugLight.position.set(3, 6, 4);
 scene.add(debugLight);
 
-const corridor = createCorridorSegment(22, 4, 3);
+const corridor = createCorridorSegment(22, 4, 3, [
+  // Positions are local to the corridor, whose centre is at world Z = -6.
+  { side: 'left', z: 1, width: 2.5 },
+  { side: 'right', z: -4, width: 2.5 }
+]);
 corridor.position.z = -6;
 scene.add(corridor);
 
@@ -125,6 +136,13 @@ const rightRoom = createSideRoom(4, 4, 3);
 rightRoom.position.set(4, 0, -10);
 rightRoom.rotation.y = Math.PI / 2;
 scene.add(rightRoom);
+
+const {
+  props: level1Props,
+  animatedProps: level1AnimatedProps,
+  interactables: level1RoomInteractables
+} = createLevel1Props();
+scene.add(...level1Props);
 
 const level1HintBeacons = [
   createHintBeacon(new THREE.Vector3(-1.7, 1.2, -5), 0x37c8ff),
@@ -192,6 +210,28 @@ controls.setBounds({
 const minimap = new Minimap(controls);
 const objectiveTracker = new ObjectiveTracker(3);
 const hud = new HUD(objectiveTracker);
+
+function setHudPhase(phase) {
+  // Supports both the current HUD and an older browser-cached HUD module.
+  if (typeof hud.setPhase === 'function') {
+    hud.setPhase(phase);
+    return;
+  }
+
+  hud.currentPhase = phase;
+  hud.update();
+}
+
+setHudPhase('LEVEL 1: Recover three reactor access keycards');
+
+objectiveTracker.onChange = () => {
+  hud.update();
+
+  if (objectiveTracker.isObjectiveComplete()) {
+    setHudPhase('LEVEL 1: Return to the reactor access door');
+    hud.setMessage('All keycards recovered — reactor access is available.');
+  }
+};
 controls.onViewModeChange = (viewMode) => {
   hud.setMessage(
     viewMode === 'firstPerson'
@@ -200,14 +240,24 @@ controls.onViewModeChange = (viewMode) => {
   );
 };
 const level2Timer = new LevelTimer(60);
+level2Timer.stop();
 hud.setLevelTimer(level2Timer);
+controls.onStaminaChange = (value, maxValue, isSprinting) => {
+  hud.setStamina(value, maxValue, isSprinting);
+};
 
 const interactionSystem = new InteractionSystem(
   camera,
   scene,
   objectiveTracker,
-  hud
+  hud,
+  2,
+  () => controls.getPlayerPosition()
 );
+
+for (const interactable of level1RoomInteractables) {
+  interactionSystem.register(interactable);
+}
 
 const keycard1 = createKeycard(new THREE.Vector3(-5.5, 1, -5));
 const keycard2 = createKeycard(new THREE.Vector3(5.5, 1, -10));
@@ -225,7 +275,48 @@ const level1Door = createDoor(new THREE.Vector3(0, 1.1, -16));
 interactionSystem.register(level1Door);
 minimap.addMarker(level1Door, 'door');
 
+const level1WalkableAreas = [
+  // Main corridor, including the final keycard and locked exit.
+  { minX: -1.72, maxX: 1.72, minZ: -15.2, maxZ: 6.2 },
+  // Maintenance Bay entrance and room interior.
+  { minX: -6.05, maxX: -1.72, minZ: -7.05, maxZ: -2.95 },
+  // Storage Bay entrance and room interior.
+  { minX: 1.72, maxX: 6.05, minZ: -12.05, maxZ: -7.95 }
+];
+
+controls.setMovementConstraint((nextPosition) => {
+  // Later levels retain their existing bounds once Level 1 is complete.
+  if (level1Door.userData.isOpen) return true;
+
+  const isInsideLevel1 = level1WalkableAreas.some((area) => (
+    nextPosition.x >= area.minX &&
+    nextPosition.x <= area.maxX &&
+    nextPosition.z >= area.minZ &&
+    nextPosition.z <= area.maxZ
+  ));
+
+  if (!isInsideLevel1) {
+    hud.setMessage('Reactor access is locked — collect all three keycards.');
+  }
+
+  return isInsideLevel1;
+});
+
+controls.setCollisionBoxes([
+  // Maintenance Bay crates and terminal.
+  { minX: -5.9, maxX: -4.25, minZ: -4.7, maxZ: -3.75 },
+  { minX: -5.9, maxX: -5.2, minZ: -6.15, maxZ: -5.65, padding: 0.12 },
+  // Storage Bay crate stack and terminal.
+  { minX: 4.35, maxX: 5.95, minZ: -9.5, maxZ: -8.7 },
+  { minX: 5.2, maxX: 5.9, minZ: -11.15, maxZ: -10.65, padding: 0.12 }
+]);
+
 const checkpointPosition = new THREE.Vector3(0, 1.6, 6);
+const level1CheckpointBeacon = createCheckpointBeacon(
+  new THREE.Vector3(checkpointPosition.x, 0, checkpointPosition.z)
+);
+scene.add(level1CheckpointBeacon);
+minimap.addMarker(level1CheckpointBeacon, 'checkpoint');
 
 const steamVents = [
   createSteamVent(new THREE.Vector3(0, 0, -6.5))
@@ -233,6 +324,7 @@ const steamVents = [
 
 for (const vent of steamVents) {
   scene.add(vent);
+  minimap.addMarker(vent, 'hazard');
 }
 const powerJunctions = [
   createPowerJunction(new THREE.Vector3(-2, 1.4, -26), 1),
@@ -269,7 +361,10 @@ scene.add(reactorCore);
 minimap.addMarker(reactorCore, 'core');
 
 const level3Timer = new LevelTimer(45);
+level3Timer.stop();
+
 let gameOver = false;
+let lastPhase = '';
 
 scene.add(reactorConsole);
 
@@ -309,7 +404,7 @@ const clock = new THREE.Clock();
 function animate() {
   requestAnimationFrame(animate);
 
-  const delta = clock.getDelta();
+  const delta = Math.min(clock.getDelta(), 0.05);
   if (!overlay.isPlaying()) {
     renderer.render(scene, camera);
     return;
@@ -323,16 +418,14 @@ function animate() {
   }
 
   const wasHitBySteam = checkSteamVentHit(
-    camera,
-    steamVents,
-    checkpointPosition
+    controls.getPlayerPosition(),
+    steamVents
   );
 
   if (wasHitBySteam) {
+    controls.respawn(checkpointPosition);
     hud.setMessage('Steam vent hit you - returned to checkpoint');
   }
-
-  updatePowerPuzzle(powerJunctions, reactorConsole);
 
   for (const beam of securityBeams) {
     beam.userData.update(delta);
@@ -345,19 +438,36 @@ function animate() {
   );
 
   if (wasHitByBeam) {
+    controls.respawn(level2CheckpointPosition);
     hud.setMessage('Security beam hit you - returned to control room entrance');
   }
 
-  level2Timer.update(delta);
-
   const isPuzzleComplete = updatePowerPuzzle(powerJunctions, reactorConsole);
+
+  const playerZ = controls.getPlayerPosition().z;
+  const inLevel2 = playerZ <= -18 && playerZ > -30;
+  const inLevel3 = playerZ <= -30;
+
+  if (inLevel2 && lastPhase !== 'level2') {
+    level2Timer.reset();
+    hud.setMessage('Power routing online. Follow the blue, yellow, then green path.');
+  }
+
+  if (inLevel3 && lastPhase !== 'level3') {
+    level3Timer.reset();
+    collapseStarted = true;
+    hud.setMessage('MELTDOWN SEQUENCE STARTED - sprint to the core!');
+  }
+
+  if (inLevel2 && !isPuzzleComplete) level2Timer.update(delta);
+  lastPhase = inLevel3 ? 'level3' : inLevel2 ? 'level2' : 'level1';
 
   if (isPuzzleComplete) {
     level2Timer.stop();
   }
 
   if (level2Timer.isFinished() && !reactorConsole.userData.isComplete) {
-    camera.position.copy(level2CheckpointPosition);
+    controls.respawn(level2CheckpointPosition);
     resetPowerPuzzle(powerJunctions, reactorConsole);
     level2Timer.reset();
     hud.setMessage('Timer expired - puzzle reset');
@@ -380,7 +490,7 @@ function animate() {
   if (!gameOver) {
     reactorCore.userData.update(delta);
 
-    const playerInLevel3 = camera.position.z < -30;
+    const playerInLevel3 = controls.getPlayerPosition().z < -30;
 
     if (playerInLevel3) {
       collapseStarted = true;
@@ -389,7 +499,7 @@ function animate() {
     if (playerInLevel3 && !reactorCore.userData.isSealed) {
       level3Timer.update(delta);
 
-      hud.setMessage(`Meltdown Timer: ${level3Timer.getDisplayTime()}s`);
+      setHudPhase(`MELTDOWN: reach the core  |  ${level3Timer.getDisplayTime()}s`);
 
       updateCollapseSequence(collapseChunks, delta, collapseStarted);
 
@@ -403,6 +513,7 @@ function animate() {
         collapseStarted = false;
         resetCollapseSequence(collapseChunks);
         level3Timer.reset();
+        controls.respawn(level3CheckpointPosition);
         hud.setMessage('Corridor collapsed - returned to Level 3 entrance');
       }
 
@@ -423,11 +534,13 @@ function animate() {
       }
     }
   }
-  interactionSystem.update(delta);
   for (const beacon of level1HintBeacons) {
     beacon.userData.update(delta);
   }
-  minimap.addMarker(reactorCore, 'core');
+  for (const prop of level1AnimatedProps) {
+    prop.userData.update?.(objectiveTracker, delta);
+  }
+  level1CheckpointBeacon.userData.update(delta);
   minimap.update(delta);
   updateLevelTitle();
   levelTitle.update(delta);

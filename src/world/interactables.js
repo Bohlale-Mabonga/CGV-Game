@@ -18,6 +18,18 @@ export function createKeycard(position) {
   card.rotation.x = Math.PI / 2;
   group.add(card);
 
+  const halo = new THREE.Mesh(
+    new THREE.TorusGeometry(0.32, 0.018, 8, 24),
+    new THREE.MeshBasicMaterial({
+      color: 0x37c8ff,
+      transparent: true,
+      opacity: 0.8
+    })
+  );
+  halo.rotation.x = Math.PI / 2;
+  halo.position.y = -0.08;
+  group.add(halo);
+
   const glow = new THREE.PointLight(0x37c8ff, 1.2, 2);
   glow.position.set(0, 0.2, 0);
   group.add(glow);
@@ -31,6 +43,9 @@ export function createKeycard(position) {
     group.rotation.y += delta * 2.5;
     group.position.y =
       group.userData.baseY + Math.sin(Date.now() * 0.004) * 0.12;
+
+    const haloScale = 1 + Math.sin(Date.now() * 0.005) * 0.12;
+    halo.scale.set(haloScale, haloScale, haloScale);
 
     const pulse = 1 + Math.sin(Date.now() * 0.006) * 0.35;
     glow.intensity = pulse;
@@ -75,6 +90,10 @@ export function createDoor(position) {
   scannerLight.position.set(0.75, 0.25, 0.2);
   mesh.add(scannerLight);
 
+  const doorLight = new THREE.PointLight(0xff3344, 1.1, 3);
+  doorLight.position.set(0, 1.3, 0.3);
+  mesh.add(doorLight);
+
   const counterSign = createSign(
     '0 / 3',
     new THREE.Vector3(0, 0.55, 0.09),
@@ -94,12 +113,15 @@ export function createDoor(position) {
 
   mesh.userData.interactable = true;
   mesh.userData.type = 'door';
+  mesh.userData.prompt = 'Press E to unlock the reactor access door';
   mesh.userData.highlightTarget = mesh;
   mesh.userData.isOpen = false;
   mesh.userData.isUnlocked = false;
   mesh.userData.lastKeycardCount = -1;
+  mesh.userData.closedY = position.y;
+  mesh.userData.openY = position.y + 2.2;
 
-  mesh.userData.update = (objectiveTracker) => {
+  mesh.userData.update = (objectiveTracker, delta = 0) => {
     if (mesh.userData.lastKeycardCount !== objectiveTracker.keycardsCollected) {
       mesh.userData.lastKeycardCount = objectiveTracker.keycardsCollected;
 
@@ -120,6 +142,19 @@ export function createDoor(position) {
       mesh.material = unlockedMaterial;
       scanner.material.color.set(0x37ff8b);
       scannerLight.color.set(0x37ff8b);
+      doorLight.color.set(0x37ff8b);
+      mesh.userData.prompt = 'Press E to open the reactor access door';
+    }
+
+    scannerLight.intensity = mesh.userData.isUnlocked
+      ? 0.75 + Math.sin(performance.now() * 0.008) * 0.25
+      : 1;
+
+    if (mesh.userData.isOpen) {
+      mesh.position.y = Math.min(
+        mesh.userData.openY,
+        mesh.position.y + delta * 3.5
+      );
     }
   };
 
@@ -129,10 +164,13 @@ export function createDoor(position) {
     if (objectiveTracker.isObjectiveComplete()) {
       mesh.userData.isOpen = true;
       mesh.userData.ignoreCollision = true;
-      mesh.position.y += 2.2;
       console.log('Door opened - objective complete!');
+      return { message: 'Reactor access unlocked. Proceed to the control room.' };
     } else {
       console.log('Door locked - find the remaining keycards first.');
+      return {
+        message: `Door locked — ${objectiveTracker.requiredKeycards - objectiveTracker.keycardsCollected} keycard(s) remaining.`
+      };
     }
   };
 
