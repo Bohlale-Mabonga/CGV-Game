@@ -48,7 +48,9 @@ export class Minimap {
         const colors = {
             keycard: '#ffdd33',
             door: '#33aaff',
-            core: '#ff8800'
+            core: '#ff8800',
+            hazard: '#ff4455',
+            checkpoint: '#37c8ff'
         };
 
         Object.assign(marker.style, {

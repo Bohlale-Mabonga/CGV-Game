@@ -7,6 +7,11 @@ export class PlayerControls {
     this.playerModel = playerModel;
 
     this.moveSpeed = 3.5;
+    this.sprintMultiplier = 1.75;
+    this.maxStamina = 100;
+    this.stamina = this.maxStamina;
+    this.staminaDrainRate = 34;
+    this.staminaRegenRate = 22;
     this.lookSpeed = 0.0025;
 
     this.viewMode = 'firstPerson';
@@ -16,13 +21,19 @@ export class PlayerControls {
     this.pitch = 0;
 
     this.bounds = null;
+    this.canMoveTo = null;
+    this.collisionBoxes = [];
+    this.playerRadius = 0.28;
 
     this.keys = {
       forward: false,
       back: false,
       left: false,
-      right: false
+      right: false,
+      sprint: false
     };
+    this.isSprinting = false;
+    this.onStaminaChange = null;
 
     this.isLocked = false;
     this.onViewModeChange = null;
@@ -39,6 +50,11 @@ export class PlayerControls {
       this.isLocked = document.pointerLockElement === domElement;
     });
 
+    window.addEventListener('blur', () => {
+      for (const key of Object.keys(this.keys)) this.keys[key] = false;
+      this.isSprinting = false;
+    });
+
     this._updateCamera();
   }
 
@@ -46,8 +62,30 @@ export class PlayerControls {
     this.bounds = bounds;
   }
 
+  setMovementConstraint(callback) {
+    this.canMoveTo = callback;
+  }
+
+  setCollisionBoxes(collisionBoxes) {
+    this.collisionBoxes = collisionBoxes;
+  }
+
   getPlayerPosition() {
     return this.playerPosition;
+  }
+
+  getPlayerRotationY() {
+    return this.yaw;
+  }
+
+  getStamina() {
+    return this.stamina;
+  }
+
+  respawn(position) {
+    this.playerPosition.copy(position);
+    this.stamina = this.maxStamina;
+    this._updateCamera();
   }
 
   toggleViewMode() {
@@ -70,8 +108,9 @@ export class PlayerControls {
     if (e.code === 'KeyS') this.keys.back = true;
     if (e.code === 'KeyA') this.keys.left = true;
     if (e.code === 'KeyD') this.keys.right = true;
+    if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') this.keys.sprint = true;
 
-    if (e.code === 'KeyV') {
+    if (e.code === 'KeyV' && !e.repeat) {
       this.toggleViewMode();
     }
   }
@@ -81,6 +120,7 @@ export class PlayerControls {
     if (e.code === 'KeyS') this.keys.back = false;
     if (e.code === 'KeyA') this.keys.left = false;
     if (e.code === 'KeyD') this.keys.right = false;
+    if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') this.keys.sprint = false;
   }
 
   _onMouseMove(e) {
@@ -98,19 +138,37 @@ export class PlayerControls {
   }
 
   _applyBounds() {
+    this._applyBoundsTo(this.playerPosition);
+  }
+
+  _applyBoundsTo(position) {
     if (!this.bounds) return;
 
-    this.playerPosition.x = THREE.MathUtils.clamp(
-      this.playerPosition.x,
+    position.x = THREE.MathUtils.clamp(
+      position.x,
       this.bounds.minX,
       this.bounds.maxX
     );
 
-    this.playerPosition.z = THREE.MathUtils.clamp(
-      this.playerPosition.z,
+    position.z = THREE.MathUtils.clamp(
+      position.z,
       this.bounds.minZ,
       this.bounds.maxZ
     );
+  }
+
+  _hitsCollision(position) {
+    return this.collisionBoxes.some((box) => {
+      if (box.isActive && !box.isActive()) return false;
+
+      const padding = box.padding ?? this.playerRadius;
+      return (
+        position.x > box.minX - padding &&
+        position.x < box.maxX + padding &&
+        position.z > box.minZ - padding &&
+        position.z < box.maxZ + padding
+      );
+    });
   }
 
   _updateCamera() {
@@ -148,7 +206,18 @@ export class PlayerControls {
   }
 
   update(delta) {
-    const speed = this.moveSpeed * delta;
+    const hasMovementInput = this.keys.forward || this.keys.back || this.keys.left || this.keys.right;
+    this.isSprinting = Boolean(this.keys.sprint && hasMovementInput && this.stamina > 0);
+
+    if (this.isSprinting) {
+      this.stamina = Math.max(0, this.stamina - this.staminaDrainRate * delta);
+    } else {
+      this.stamina = Math.min(this.maxStamina, this.stamina + this.staminaRegenRate * delta);
+    }
+
+    if (this.onStaminaChange) this.onStaminaChange(this.stamina, this.maxStamina, this.isSprinting);
+
+    const speed = this.moveSpeed * (this.isSprinting ? this.sprintMultiplier : 1) * delta;
 
     const forward = new THREE.Vector3(
       -Math.sin(this.yaw),
@@ -162,10 +231,26 @@ export class PlayerControls {
       -Math.sin(this.yaw)
     );
 
-    if (this.keys.forward) this.playerPosition.addScaledVector(forward, speed);
-    if (this.keys.back) this.playerPosition.addScaledVector(forward, -speed);
-    if (this.keys.left) this.playerPosition.addScaledVector(right, -speed);
-    if (this.keys.right) this.playerPosition.addScaledVector(right, speed);
+    const movement = new THREE.Vector3();
+
+    if (this.keys.forward) movement.add(forward);
+    if (this.keys.back) movement.sub(forward);
+    if (this.keys.left) movement.sub(right);
+    if (this.keys.right) movement.add(right);
+
+    if (movement.lengthSq() > 0) {
+      movement.normalize().multiplyScalar(speed);
+
+      const nextPosition = this.playerPosition.clone().add(movement);
+      this._applyBoundsTo(nextPosition);
+
+      const canEnterArea =
+        !this.canMoveTo || this.canMoveTo(nextPosition, this.playerPosition);
+
+      if (canEnterArea && !this._hitsCollision(nextPosition)) {
+        this.playerPosition.copy(nextPosition);
+      }
+    }
 
     this._applyBounds();
     this._updateCamera();

@@ -48,6 +48,8 @@ export function createPowerJunction(position, id) {
     group.add(clueMarker);
 
     group.userData.type = 'junction';
+    group.userData.interactable = true;
+    group.userData.prompt = 'Press E to activate this power junction';
     group.userData.id = id;
     group.userData.isActive = false;
     group.userData.panel = panel;
@@ -56,6 +58,10 @@ export function createPowerJunction(position, id) {
     group.userData.wrongMaterial = wrongMaterial;
 
     group.userData.onInteract = () => {
+        if (group.userData.isActive) {
+            return { message: 'This junction is already routed.' };
+        }
+
         const expectedId = correctRoute[routeProgress];
 
         if (group.userData.id === expectedId) {
@@ -64,6 +70,7 @@ export function createPowerJunction(position, id) {
             routeProgress++;
 
             console.log(`Correct junction ${group.userData.id}`);
+            return { message: 'Power route accepted.' };
         } else {
             console.log(`Wrong junction ${group.userData.id} - puzzle reset`);
 
@@ -74,6 +81,8 @@ export function createPowerJunction(position, id) {
             setTimeout(() => {
                 panel.material = inactiveMaterial;
             }, 400);
+
+            return { message: 'Incorrect route — power sequence reset.' };
         }
     };
 
