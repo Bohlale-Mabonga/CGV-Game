@@ -83,12 +83,14 @@ function load(url) {
 let rooms = []; // store all walkable rooms
 
 async function buildLevel() {
-  const [straight, xCorridor, office, doorGltf] = await Promise.all([
-    load("assets/straight-corridor.glb"),
-    load("assets/x-corridor.glb"),
-    load("assets/office.glb"),
-    load("assets/sliding_door.glb"),
-  ]);
+  const [straight, xCorridor, office, doorGltf, coreAccessGltf] =
+    await Promise.all([
+      load("assets/straight-corridor.glb"),
+      load("assets/x-corridor.glb"),
+      load("assets/office.glb"),
+      load("assets/sliding_door.glb"),
+      load("assets/core_access.glb"),
+    ]);
 
   const door = doorGltf.scene;
   const doorClips = doorGltf.animations;
@@ -177,11 +179,17 @@ async function buildLevel() {
 
   window.endDoor = endDoor;
 
+  // Add core access room (4x the size of offices) at the end of the corridor
+  const coreAccessRoom = SkeletonUtils.clone(coreAccessGltf.scene);
+  coreAccessRoom.position.set(0, 0, -24.75);
+  coreAccessRoom.userData = { halfW: 8 / 2, halfD: 8 / 2 };
+  scene.add(coreAccessRoom);
+
   collisionObjects.push(startDoor.object);
   collisionObjects.push(...officeDoors.map((d) => d.object));
   collisionObjects.push(endDoor.object);
 
-  rooms = [s1, x1, x2, o1, o2, o3, o4];
+  rooms = [s1, x1, x2, o1, o2, o3, o4, coreAccessRoom];
 
   window.isInsideAnyRoom = (px, pz) => {
     return rooms.some((r) => {
@@ -244,7 +252,7 @@ const interactionSystem = new InteractionSystem(
 );
 
 interactionSystem.register(createKeycard(new THREE.Vector3(-5.5, 0.5, -7.5)));
-interactionSystem.register(createKeycard(new THREE.Vector3(0.5, 0.5, -13.5)));
+interactionSystem.register(createKeycard(new THREE.Vector3(0.5, 0.5, -18.5)));
 interactionSystem.register(createKeycard(new THREE.Vector3(5.5, 0.5, -14.5)));
 
 // interactionSystem.register(level1Door);
