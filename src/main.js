@@ -16,10 +16,9 @@ import { createFlashlight } from "./lights/flashlight.js";
 import { HUD } from "./ui/hud.js";
 import { createSteamVent, checkSteamVentHit } from "./world/steam-vent.js";
 import {
-  createPowerJunction,
-  createReactorConsole,
-  updatePowerPuzzle,
-  resetPowerPuzzle,
+  createGridTray,
+  openPorts,
+  buildPuzzleGrid,
 } from "./world/power-puzzle.js";
 
 import { createControlRoom } from "./world/control-room.js";
@@ -64,9 +63,9 @@ app.appendChild(renderer.domElement);
 
 scene.add(new THREE.AmbientLight(0xffffff, 1));
 
-// const debugLight = new THREE.DirectionalLight(0xffffff, 2);
-// debugLight.position.set(3, 6, 4);
-// scene.add(debugLight);
+const debugLight = new THREE.DirectionalLight(0xffffff, 2);
+debugLight.position.set(3, 6, 4);
+scene.add(debugLight);
 
 function load(url) {
   return new Promise((resolve, reject) => {
@@ -83,14 +82,23 @@ function load(url) {
 let rooms = []; // store all walkable rooms
 
 async function buildLevel() {
-  const [straight, xCorridor, office, doorGltf, coreAccessGltf] =
-    await Promise.all([
-      load("assets/straight-corridor.glb"),
-      load("assets/x-corridor.glb"),
-      load("assets/office.glb"),
-      load("assets/sliding_door.glb"),
-      load("assets/core_access.glb"),
-    ]);
+  const [
+    straight,
+    xCorridor,
+    office,
+    doorGltf,
+    coreAccessGltf,
+    straightTile,
+    cornerTile,
+  ] = await Promise.all([
+    load("assets/straight-corridor.glb"),
+    load("assets/x-corridor.glb"),
+    load("assets/office.glb"),
+    load("assets/sliding_door.glb"),
+    load("assets/core_access.glb"),
+    load("assets/s_tile.glb"),
+    load("assets/c_tile.glb"),
+  ]);
 
   const door = doorGltf.scene;
   const doorClips = doorGltf.animations;
@@ -171,19 +179,46 @@ async function buildLevel() {
     createDoorInstance(new THREE.Vector3(2, 0, -16), -Math.PI / 2, "open"),
   ];
 
-  const endDoor = createDoorInstance(
-    new THREE.Vector3(0, 0, -20),
-    0,
-    "animated",
-  );
+  const endDoor = createDoorInstance(new THREE.Vector3(0, 0, -20), 0, "open");
 
   window.endDoor = endDoor;
 
-  // Add core access room (4x the size of offices) at the end of the corridor
+  // Add core access room at the end of the corridor
   const coreAccessRoom = SkeletonUtils.clone(coreAccessGltf.scene);
   coreAccessRoom.position.set(0, 0, -24.75);
   coreAccessRoom.userData = { halfW: 8 / 2, halfD: 8 / 2 };
   scene.add(coreAccessRoom);
+
+  const gridOriginX = -1.5; // 2 cols * 1m, centered slightly west
+  const gridOriginZ = -26; // row 0 near entrance
+
+  scene.add(createGridTray(gridOriginX + 0.5, gridOriginZ - 2, 2.4, 5.4));
+
+  const layout = [
+    [
+      { type: "corner", rotation: 2 },
+      { type: "corner", rotation: 1 },
+      { type: "straight", rotation: 1 },
+      { type: "corner", rotation: 2 },
+      { type: "straight", rotation: 2 },
+    ],
+    [
+      { type: "corner", rotation: 0 },
+      { type: "corner", rotation: 3 },
+      { type: "corner", rotation: 0 },
+      { type: "corner", rotation: 0 },
+      { type: "corner", rotation: 2 },
+    ],
+  ];
+
+  const junctions = buildPuzzleGrid({
+    interactionSystem,
+    models: { straight: straightTile.scene, corner: cornerTile.scene },
+    layout,
+    originX: gridOriginX,
+    originZ: gridOriginZ,
+    tileSize: 0.5,
+  });
 
   collisionObjects.push(startDoor.object);
   collisionObjects.push(...officeDoors.map((d) => d.object));
