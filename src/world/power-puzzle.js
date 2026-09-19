@@ -239,7 +239,7 @@ export function buildPuzzleGrid({
 
       mesh.position.set(
         originX + colIdx * tileSize,
-        0,
+        0.001,
         originZ - rowIdx * tileSize,
       );
       mesh.rotation.y = (cell.rotation * Math.PI) / 2;

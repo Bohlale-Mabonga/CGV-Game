@@ -8,11 +8,11 @@ export class InteractionSystem {
     this.interactables = [];
     this.nearestInteractable = null;
 
-    document.addEventListener('keydown', (e) => {
-      if (e.code === 'KeyE' && this.nearestInteractable) {
+    document.addEventListener("keydown", (e) => {
+      if (e.code === "KeyE" && this.nearestInteractable) {
         this.nearestInteractable.userData.onInteract(
           this.objectiveTracker,
-          this.scene
+          this.scene,
         );
       }
     });
@@ -24,6 +24,7 @@ export class InteractionSystem {
   }
 
   update(delta) {
+    let nearestDist = Infinity;
     this.nearestInteractable = null;
 
     const playerPos = this.camera.position;
@@ -34,29 +35,27 @@ export class InteractionSystem {
       }
 
       const dist = playerPos.distanceTo(obj.position);
-
       if (dist > this.range) continue;
 
-      if (obj.userData.type === 'keycard') {
+      if (obj.userData.type === "keycard") {
         obj.userData.onInteract(this.objectiveTracker, this.scene);
-
         this.interactables = this.interactables.filter((o) => o !== obj);
-
-        this.hud.setMessage('Keycard collected');
+        this.hud.setMessage("Keycard collected");
       } else if (
-        obj.userData.type === 'door' ||
-        obj.userData.type === 'junction'
+        obj.userData.type === "door" ||
+        obj.userData.type === "junction"
       ) {
-        this.nearestInteractable = obj;
-
-        if (obj.userData.type === 'door') {
-          this.hud.setMessage('Press E to open door');
-        }
-
-        if (obj.userData.type === 'junction') {
-          this.hud.setMessage('Press E to toggle power junction');
+        if (dist < nearestDist) {
+          nearestDist = dist;
+          this.nearestInteractable = obj;
         }
       }
+    }
+
+    if (this.nearestInteractable?.userData.type === "door") {
+      this.hud.setMessage("Press E to open door");
+    } else if (this.nearestInteractable?.userData.type === "junction") {
+      this.hud.setMessage("Press E to rotate junction");
     }
   }
 }

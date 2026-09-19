@@ -80,6 +80,7 @@ function load(url) {
 }
 
 let rooms = []; // store all walkable rooms
+const collisionObjects = [];
 
 async function buildLevel() {
   const [
@@ -189,8 +190,8 @@ async function buildLevel() {
   coreAccessRoom.userData = { halfW: 8 / 2, halfD: 8 / 2 };
   scene.add(coreAccessRoom);
 
-  const gridOriginX = -1.5; // 2 cols * 1m, centered slightly west
-  const gridOriginZ = -26; // row 0 near entrance
+  const gridOriginX = -1.5;
+  const gridOriginZ = -26;
 
   scene.add(createGridTray(gridOriginX + 0.5, gridOriginZ - 2, 2.4, 5.4));
 
@@ -220,6 +221,10 @@ async function buildLevel() {
     tileSize: 0.5,
   });
 
+  junctions.forEach((j) =>
+    interactionSystem.register(makeJunctionInteractable(j)),
+  );
+
   collisionObjects.push(startDoor.object);
   collisionObjects.push(...officeDoors.map((d) => d.object));
   collisionObjects.push(endDoor.object);
@@ -247,7 +252,6 @@ async function buildLevel() {
 
 buildLevel();
 
-const collisionObjects = [];
 // const level1Props = createLevel1Props();
 
 // for (const prop of level1Props.props) {
