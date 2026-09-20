@@ -15,11 +15,7 @@ import { ObjectiveTracker } from "./game/objectives.js";
 import { createFlashlight } from "./lights/flashlight.js";
 import { HUD } from "./ui/hud.js";
 import { createSteamVent, checkSteamVentHit } from "./world/steam-vent.js";
-import {
-  createGridTray,
-  openPorts,
-  buildPuzzleGrid,
-} from "./world/power-puzzle.js";
+import { openPorts, buildPuzzleGrid } from "./world/power-puzzle.js";
 
 import { createControlRoom } from "./world/control-room.js";
 import {
@@ -197,8 +193,6 @@ async function buildLevel() {
 
   const gridOriginX = -2.5;
   const gridOriginZ = -26;
-
-  scene.add(createGridTray(gridOriginX + 0.5, gridOriginZ, 2.4, 5.4));
 
   const layout = [
     [

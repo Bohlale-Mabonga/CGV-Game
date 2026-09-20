@@ -164,47 +164,6 @@ export function openPorts(type, rotationSteps) {
   });
 }
 
-export function createGridTray(
-  originX,
-  originZ,
-  width,
-  depth,
-  depthDrop = 0.1,
-) {
-  const group = new THREE.Group();
-  const trayMat = new THREE.MeshStandardMaterial({
-    color: 0x1a1d22,
-    roughness: 0.9,
-  });
-  const curbMat = new THREE.MeshStandardMaterial({
-    color: 0x3a4653,
-    metalness: 0.6,
-    roughness: 0.4,
-  });
-
-  const base = new THREE.Mesh(new THREE.PlaneGeometry(width, depth), trayMat);
-  base.rotation.x = -Math.PI / 2;
-  base.position.set(originX, -depthDrop, originZ);
-  group.add(base);
-
-  const t = 0.06;
-  const walls = [
-    { w: width, d: t, x: originX, z: originZ - depth / 2 },
-    { w: width, d: t, x: originX, z: originZ + depth / 2 },
-    { w: t, d: depth, x: originX - width / 2, z: originZ },
-    { w: t, d: depth, x: originX + width / 2, z: originZ },
-  ];
-  for (const w of walls) {
-    const wall = new THREE.Mesh(
-      new THREE.BoxGeometry(w.w, depthDrop, w.d),
-      curbMat,
-    );
-    wall.position.set(w.x, -depthDrop / 2, w.z);
-    group.add(wall);
-  }
-  return group;
-}
-
 // rotate a junction's mesh with a tween, then rerun the flood-fill
 function rotateJunctionMesh(mesh, onDone) {
   const start = mesh.rotation.y;
