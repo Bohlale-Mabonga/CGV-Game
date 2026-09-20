@@ -38,7 +38,12 @@ import {
   resetCollapseSequence,
 } from "./world/collapse-sequence.js";
 
-import { createLevel1Props } from "./world/level1-props.js";
+import {
+  createLevel1Props,
+  createAuxPowerSource,
+  createContainmentInput,
+  createReactorConsole,
+} from "./world/level1-props.js";
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x111111);
@@ -190,10 +195,10 @@ async function buildLevel() {
   coreAccessRoom.userData = { halfW: 8 / 2, halfD: 8 / 2 };
   scene.add(coreAccessRoom);
 
-  const gridOriginX = -1.5;
+  const gridOriginX = -2.5;
   const gridOriginZ = -26;
 
-  scene.add(createGridTray(gridOriginX + 0.5, gridOriginZ - 2, 2.4, 5.4));
+  scene.add(createGridTray(gridOriginX + 0.5, gridOriginZ, 2.4, 5.4));
 
   const layout = [
     [
@@ -202,17 +207,19 @@ async function buildLevel() {
       { type: "straight", rotation: 1 },
       { type: "corner", rotation: 2 },
       { type: "straight", rotation: 2 },
+      { type: "corner", rotation: 2 },
     ],
     [
       { type: "corner", rotation: 0 },
       { type: "corner", rotation: 3 },
       { type: "corner", rotation: 0 },
       { type: "corner", rotation: 0 },
+      { type: "straight", rotation: 1 },
       { type: "corner", rotation: 2 },
     ],
   ];
 
-  const junctions = buildPuzzleGrid({
+  buildPuzzleGrid({
     interactionSystem,
     models: { straight: straightTile.scene, corner: cornerTile.scene },
     layout,
@@ -221,9 +228,14 @@ async function buildLevel() {
     tileSize: 0.5,
   });
 
-  junctions.forEach((j) =>
-    interactionSystem.register(makeJunctionInteractable(j)),
+  const auxPower = createAuxPowerSource(
+    new THREE.Vector3(gridOriginX - 0.6, 0.6, gridOriginZ - 0.25),
   );
+  const containmentInput = createContainmentInput(
+    new THREE.Vector3(gridOriginX + 2.5, 0.5, gridOriginZ - 1.5),
+  );
+  const reactorConsole = createReactorConsole(new THREE.Vector3(0, 0.9, -24));
+  scene.add(auxPower, containmentInput, reactorConsole);
 
   collisionObjects.push(startDoor.object);
   collisionObjects.push(...officeDoors.map((d) => d.object));

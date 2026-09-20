@@ -1,11 +1,11 @@
-import * as THREE from 'three';
+import * as THREE from "three";
 
 export class PlayerControls {
   constructor(camera, domElement) {
     this.camera = camera;
     this.domElement = domElement;
 
-    this.moveSpeed = 3.5;
+    this.moveSpeed = 1.5;
     this.lookSpeed = 0.0025;
 
     this.bounds = null;
@@ -16,21 +16,21 @@ export class PlayerControls {
       forward: false,
       back: false,
       left: false,
-      right: false
+      right: false,
     };
 
-    this.euler = new THREE.Euler(0, 0, 0, 'YXZ');
+    this.euler = new THREE.Euler(0, 0, 0, "YXZ");
     this.isLocked = false;
 
-    document.addEventListener('keydown', (e) => this._onKeyDown(e));
-    document.addEventListener('keyup', (e) => this._onKeyUp(e));
-    document.addEventListener('mousemove', (e) => this._onMouseMove(e));
+    document.addEventListener("keydown", (e) => this._onKeyDown(e));
+    document.addEventListener("keyup", (e) => this._onKeyUp(e));
+    document.addEventListener("mousemove", (e) => this._onMouseMove(e));
 
-    domElement.addEventListener('click', () => {
+    domElement.addEventListener("click", () => {
       domElement.requestPointerLock();
     });
 
-    document.addEventListener('pointerlockchange', () => {
+    document.addEventListener("pointerlockchange", () => {
       this.isLocked = document.pointerLockElement === domElement;
     });
   }
@@ -44,17 +44,17 @@ export class PlayerControls {
   }
 
   _onKeyDown(e) {
-    if (e.code === 'KeyW') this.keys.forward = true;
-    if (e.code === 'KeyS') this.keys.back = true;
-    if (e.code === 'KeyA') this.keys.left = true;
-    if (e.code === 'KeyD') this.keys.right = true;
+    if (e.code === "KeyW") this.keys.forward = true;
+    if (e.code === "KeyS") this.keys.back = true;
+    if (e.code === "KeyA") this.keys.left = true;
+    if (e.code === "KeyD") this.keys.right = true;
   }
 
   _onKeyUp(e) {
-    if (e.code === 'KeyW') this.keys.forward = false;
-    if (e.code === 'KeyS') this.keys.back = false;
-    if (e.code === 'KeyA') this.keys.left = false;
-    if (e.code === 'KeyD') this.keys.right = false;
+    if (e.code === "KeyW") this.keys.forward = false;
+    if (e.code === "KeyS") this.keys.back = false;
+    if (e.code === "KeyA") this.keys.left = false;
+    if (e.code === "KeyD") this.keys.right = false;
   }
 
   _onMouseMove(e) {
@@ -65,10 +65,7 @@ export class PlayerControls {
     this.euler.y -= e.movementX * this.lookSpeed;
     this.euler.x -= e.movementY * this.lookSpeed;
 
-    this.euler.x = Math.max(
-      -Math.PI / 2,
-      Math.min(Math.PI / 2, this.euler.x)
-    );
+    this.euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.euler.x));
 
     this.camera.quaternion.setFromEuler(this.euler);
   }
@@ -79,13 +76,13 @@ export class PlayerControls {
     this.camera.position.x = THREE.MathUtils.clamp(
       this.camera.position.x,
       this.bounds.minX,
-      this.bounds.maxX
+      this.bounds.maxX,
     );
 
     this.camera.position.z = THREE.MathUtils.clamp(
       this.camera.position.z,
       this.bounds.minZ,
-      this.bounds.maxZ
+      this.bounds.maxZ,
     );
   }
 
