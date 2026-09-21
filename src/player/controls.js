@@ -5,7 +5,7 @@ export class PlayerControls {
     this.camera = camera;
     this.domElement = domElement;
 
-    this.moveSpeed = 1.5;
+    this.moveSpeed = 2;
     this.lookSpeed = 0.0025;
 
     this.bounds = null;

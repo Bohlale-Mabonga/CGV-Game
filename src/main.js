@@ -51,7 +51,7 @@ const camera = new THREE.PerspectiveCamera(
   100,
 );
 
-camera.position.set(0, 0.3, -2);
+camera.position.set(0, 0.4, -2);
 camera.lookAt(0, 1.5, -4);
 scene.add(camera);
 
@@ -64,9 +64,9 @@ app.appendChild(renderer.domElement);
 
 scene.add(new THREE.AmbientLight(0xffffff, 1));
 
-const debugLight = new THREE.DirectionalLight(0xffffff, 2);
-debugLight.position.set(3, 6, 4);
-scene.add(debugLight);
+// const debugLight = new THREE.DirectionalLight(0xffffff, 2);
+// debugLight.position.set(3, 6, 4);
+// scene.add(debugLight);
 
 function load(url) {
   return new Promise((resolve, reject) => {
@@ -181,7 +181,11 @@ async function buildLevel() {
     createDoorInstance(new THREE.Vector3(2, 0, -16), -Math.PI / 2, "open"),
   ];
 
-  const endDoor = createDoorInstance(new THREE.Vector3(0, 0, -20), 0, "open");
+  const endDoor = createDoorInstance(
+    new THREE.Vector3(0, 0, -20),
+    0,
+    "animated",
+  );
 
   window.endDoor = endDoor;
 
@@ -258,14 +262,6 @@ async function buildLevel() {
 
 buildLevel();
 
-// const level1Props = createLevel1Props();
-
-// for (const prop of level1Props.props) {
-//   scene.add(prop);
-//   if (prop.userData.type === 'crate') {
-//     collisionObjects.push(prop);
-//   }
-// }
 createFlashlight(camera);
 
 const playercontrols = new PlayerControls(camera, renderer.domElement);
@@ -300,63 +296,22 @@ interactionSystem.register(createKeycard(new THREE.Vector3(-5.5, 0.5, -7.5)));
 interactionSystem.register(createKeycard(new THREE.Vector3(0.5, 0.5, -18.5)));
 interactionSystem.register(createKeycard(new THREE.Vector3(5.5, 0.5, -14.5)));
 
-// interactionSystem.register(level1Door);
-// collisionObjects.push(level1Door);
-// const checkpointPosition = new THREE.Vector3(0, 1.6, 6);
+const level2CheckpointPosition = new THREE.Vector3(0, 0.4, -21);
 
-// const steamVents = [
-//   createSteamVent(new THREE.Vector3(0, 0, -6.5))
-// ];
+const securityBeams = [
+  createSecurityBeam(new THREE.Vector3(0, 0, -26), {
+    facing: 0, // aimed back across the grid from the opposite side
+    arc: Math.PI / 2.2,
+    speed: 0.9,
+  }),
+  createSecurityBeam(new THREE.Vector3(-3.2, 0, -26), {
+    facing: Math.PI / 2, // aimed toward +Z-ish, tweak per your room orientation
+    arc: Math.PI / 2.2,
+    speed: 0.7,
+  }),
+];
 
-// for (const vent of steamVents) {
-//   scene.add(vent);
-// }
-// const powerJunctions = [
-//   createPowerJunction(new THREE.Vector3(-2, 1.4, -26), 1),
-//   createPowerJunction(new THREE.Vector3(0, 1.4, -26), 2),
-//   createPowerJunction(new THREE.Vector3(2, 1.4, -26), 3)
-// ];
-
-// const reactorConsole = createReactorConsole(
-//   new THREE.Vector3(0, 0.8, -23)
-// );
-// const controlRoom = createControlRoom(new THREE.Vector3(0, 0, -22));
-// scene.add(controlRoom);
-
-// for (const junction of powerJunctions) {
-//   interactionSystem.register(junction);
-// }
-
-// const level2CheckpointPosition = new THREE.Vector3(0, 1.6, -19);
-
-// const securityBeams = [
-//   createSecurityBeam(new THREE.Vector3(0, 0, -23))
-// ];
-
-// for (const beam of securityBeams) {
-//   scene.add(beam);
-// }
-
-// const meltdownCorridor = createCorridorSegment(18, 4, 3);
-// meltdownCorridor.position.z = -34;
-// scene.add(meltdownCorridor);
-
-// const reactorCore = createReactorCore(new THREE.Vector3(0, 1.5, -42));
-// scene.add(reactorCore);
-
-// const level3Timer = new LevelTimer(45);
-// let gameOver = false;
-
-// scene.add(reactorConsole);
-
-// const level3CheckpointPosition = new THREE.Vector3(0, 1.6, -30);
-// const collapseChunks = createCollapseSequence();
-
-// for (const chunk of collapseChunks) {
-//   scene.add(chunk);
-// }
-
-// let collapseStarted = false;
+for (const beam of securityBeams) scene.add(beam);
 
 window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -391,19 +346,19 @@ function animate() {
 
   // updatePowerPuzzle(powerJunctions, reactorConsole);
 
-  // for (const beam of securityBeams) {
-  //   beam.userData.update(delta);
-  // }
+  for (const beam of securityBeams) {
+    beam.userData.update(delta);
+  }
 
-  // const wasHitByBeam = checkSecurityBeamHit(
-  //   camera,
-  //   securityBeams,
-  //   level2CheckpointPosition
-  // );
+  const wasHitByBeam = checkSecurityBeamHit(
+    camera,
+    securityBeams,
+    level2CheckpointPosition,
+  );
 
-  // if (wasHitByBeam) {
-  //   hud.setMessage('Security beam hit you - returned to control room entrance');
-  // }
+  if (wasHitByBeam) {
+    hud.setMessage("Security beam hit you - returned to control room entrance");
+  }
 
   // level2Timer.update(delta);
 
