@@ -34,6 +34,9 @@ export class PlayerControls {
       this.isLocked = document.pointerLockElement === domElement;
     });
   }
+  getYaw() {
+    return this.euler.y;
+  }
 
   setBounds(bounds) {
     this.bounds = bounds;

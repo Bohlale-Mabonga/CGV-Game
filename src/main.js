@@ -2,6 +2,7 @@ import "./style.css";
 import * as THREE from "three";
 import * as SkeletonUtils from "three/examples/jsm/utils/SkeletonUtils.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { AnimationMixer } from "three";
 
@@ -68,6 +69,16 @@ scene.add(new THREE.AmbientLight(0xffffff, 1));
 // debugLight.position.set(3, 6, 4);
 // scene.add(debugLight);
 
+const EYE_HEIGHT = camera.position.y; // 0.4
+
+function syncRobotToCamera() {
+  robot.position.set(
+    camera.position.x,
+    camera.position.y - EYE_HEIGHT,
+    camera.position.z,
+  );
+  robot.rotation.y = playercontrols.getYaw() + Math.PI;
+}
 function load(url) {
   return new Promise((resolve, reject) => {
     const loader = new GLTFLoader();
@@ -80,8 +91,27 @@ function load(url) {
   });
 }
 
+function loadFBX(url) {
+  return new Promise((resolve, reject) => {
+    const loader = new FBXLoader();
+    loader.load(url, resolve, undefined, reject);
+  });
+}
+
 let rooms = []; // store all walkable rooms
 const collisionObjects = [];
+
+const objectiveTracker = new ObjectiveTracker(3);
+const hud = new HUD(objectiveTracker);
+const level2Timer = new LevelTimer(60);
+hud.setLevelTimer(level2Timer);
+
+const interactionSystem = new InteractionSystem(
+  camera,
+  scene,
+  objectiveTracker,
+  hud,
+);
 
 async function buildLevel() {
   const [
@@ -264,6 +294,41 @@ buildLevel();
 
 createFlashlight(camera);
 
+const robot = await loadFBX("assets/robot.fbx");
+//const robotInstance = SkeletonUtils.clone(robot.scene);
+robot.position.set(0, 0, -2);
+robot.rotation.y = Math.PI;
+robot.scale.set(0.1, 0.1, 0.1);
+scene.add(robot);
+
+const walkFbx = await loadFBX("assets/Walking.fbx");
+const walkClip = walkFbx.animations[0];
+
+const robotMixer = new THREE.AnimationMixer(robot);
+const idleFbx = await loadFBX("assets/Idle.fbx"); // grab an idle clip from Mixamo too
+const idleClip = idleFbx.animations[0];
+
+const idleAction = robotMixer.clipAction(idleClip);
+const walkAction = robotMixer.clipAction(walkClip);
+idleAction.play(); // start idle
+
+let currentAction = idleAction;
+let lastPos = camera.position.clone();
+
+function updateLocomotionAnim() {
+  const moved = camera.position.distanceTo(lastPos);
+  lastPos.copy(camera.position);
+
+  const isMoving = moved > 0.001; // tune threshold to your movement speed * expected delta
+  const nextAction = isMoving ? walkAction : idleAction;
+
+  if (nextAction !== currentAction) {
+    nextAction.reset().fadeIn(0.2).play();
+    currentAction.fadeOut(0.2);
+    currentAction = nextAction;
+  }
+}
+
 const playercontrols = new PlayerControls(camera, renderer.domElement);
 
 const originalUpdate = playercontrols.update.bind(playercontrols);
@@ -280,17 +345,7 @@ playercontrols.update = (delta) => {
 
 playercontrols.setObstacles(collisionObjects);
 
-const objectiveTracker = new ObjectiveTracker(3);
-const hud = new HUD(objectiveTracker);
-const level2Timer = new LevelTimer(60);
 hud.setLevelTimer(level2Timer);
-
-const interactionSystem = new InteractionSystem(
-  camera,
-  scene,
-  objectiveTracker,
-  hud,
-);
 
 interactionSystem.register(createKeycard(new THREE.Vector3(-5.5, 0.5, -7.5)));
 interactionSystem.register(createKeycard(new THREE.Vector3(0.5, 0.5, -18.5)));
@@ -302,12 +357,12 @@ const securityBeams = [
   createSecurityBeam(new THREE.Vector3(0, 0, -26), {
     facing: 0, // aimed back across the grid from the opposite side
     arc: Math.PI / 2.2,
-    speed: 0.9,
+    speed: 0.225,
   }),
   createSecurityBeam(new THREE.Vector3(-3.2, 0, -26), {
     facing: Math.PI / 2, // aimed toward +Z-ish, tweak per your room orientation
     arc: Math.PI / 2.2,
-    speed: 0.7,
+    speed: 0.175,
   }),
 ];
 
@@ -327,7 +382,11 @@ function animate() {
 
   const delta = clock.getDelta();
 
+  robotMixer.update(delta);
+
   playercontrols.update(delta);
+  syncRobotToCamera();
+  updateLocomotionAnim();
   interactionSystem.update(delta);
 
   // for (const vent of steamVents) {
