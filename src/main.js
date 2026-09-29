@@ -1,49 +1,21 @@
 import "./style.css";
 import * as THREE from "three";
-import * as SkeletonUtils from "three/examples/jsm/utils/SkeletonUtils.js";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader.js";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { AnimationMixer } from "three";
 
 import { PlayerControls } from "./player/controls.js";
 import { InteractionSystem } from "./player/interaction-system.js";
+import { createRobot } from "./player/robot.js";
 
-import { createCorridorSegment } from "./world/corridor.js";
-import { createKeycard, createDoor } from "./world/interactables.js";
-
-import { ObjectiveTracker } from "./game/objectives.js";
+import { buildLevel } from "./world/level.js";
 import { createFlashlight } from "./lights/flashlight.js";
-import { HUD } from "./ui/hud.js";
-import { createSteamVent, checkSteamVentHit } from "./world/steam-vent.js";
-import { openPorts, buildPuzzleGrid } from "./world/power-puzzle.js";
-
-import { createControlRoom } from "./world/control-room.js";
-import {
-  createSecurityBeam,
-  checkSecurityBeamHit,
-} from "./world/security-beam.js";
-
+import { createLevelState } from "./game/level-state.js";
+import { ObjectiveTracker } from "./game/objectives.js";
 import { LevelTimer } from "./game/level2-timer.js";
+import { HUD } from "./ui/hud.js";
 
-import { createReactorCore, checkCoreReached } from "./world/reactor-core.js";
-
-import {
-  createCollapseSequence,
-  updateCollapseSequence,
-  checkCollapseHit,
-  resetCollapseSequence,
-} from "./world/collapse-sequence.js";
-
-import {
-  createLevel1Props,
-  createAuxPowerSource,
-  createContainmentInput,
-  createReactorConsole,
-} from "./world/level1-props.js";
-
+// --- renderer / scene / camera ---
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x111111);
+scene.add(new THREE.AmbientLight(0xffffff, 1));
 
 const camera = new THREE.PerspectiveCamera(
   70,
@@ -51,7 +23,6 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   100,
 );
-
 camera.position.set(0, 0.4, -2);
 camera.lookAt(0, 1.5, -4);
 scene.add(camera);
@@ -59,53 +30,18 @@ scene.add(camera);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+document.querySelector("#app").appendChild(renderer.domElement);
 
-const app = document.querySelector("#app");
-app.appendChild(renderer.domElement);
+window.addEventListener("resize", () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
 
-scene.add(new THREE.AmbientLight(0xffffff, 1));
-
-// const debugLight = new THREE.DirectionalLight(0xffffff, 2);
-// debugLight.position.set(3, 6, 4);
-// scene.add(debugLight);
-
-const EYE_HEIGHT = camera.position.y; // 0.4
-
-function syncRobotToCamera() {
-  robot.position.set(
-    camera.position.x,
-    camera.position.y - EYE_HEIGHT,
-    camera.position.z,
-  );
-  robot.rotation.y = playercontrols.getYaw() + Math.PI;
-}
-function load(url) {
-  return new Promise((resolve, reject) => {
-    const loader = new GLTFLoader();
-    loader.load(
-      url,
-      (gltf) => resolve(gltf),
-      undefined,
-      (error) => reject(error),
-    );
-  });
-}
-
-function loadFBX(url) {
-  return new Promise((resolve, reject) => {
-    const loader = new FBXLoader();
-    loader.load(url, resolve, undefined, reject);
-  });
-}
-
-let rooms = []; // store all walkable rooms
-const collisionObjects = [];
-
+// --- game systems ---
 const objectiveTracker = new ObjectiveTracker(3);
 const hud = new HUD(objectiveTracker);
-const level2Timer = new LevelTimer(60);
-hud.setLevelTimer(level2Timer);
-
+hud.setLevelTimer(new LevelTimer(60));
 const interactionSystem = new InteractionSystem(
   camera,
   scene,
@@ -113,404 +49,36 @@ const interactionSystem = new InteractionSystem(
   hud,
 );
 
-async function buildLevel() {
-  const [
-    straight,
-    xCorridor,
-    office,
-    doorGltf,
-    coreAccessGltf,
-    straightTile,
-    cornerTile,
-    battery,
-    containmentInputGltf,
-  ] = await Promise.all([
-    load("assets/straight-corridor.glb"),
-    load("assets/x-corridor.glb"),
-    load("assets/office.glb"),
-    load("assets/sliding_door.glb"),
-    load("assets/core_access.glb"),
-    load("assets/s_tile.glb"),
-    load("assets/c_tile.glb"),
-    load("assets/battery.glb"),
-    load("assets/containment.glb"),
-  ]);
+const level = await buildLevel({ scene, interactionSystem });
 
-  const door = doorGltf.scene;
-  const doorClips = doorGltf.animations;
-
-  function createDoorInstance(position, rotationY, state) {
-    const instance = SkeletonUtils.clone(door);
-    instance.position.copy(position);
-    if (rotationY) instance.rotation.y = rotationY;
-    instance.userData = { ignoreCollision: state === "open" };
-    scene.add(instance);
-
-    const mixer = new THREE.AnimationMixer(instance);
-    const clip = doorClips[0];
-    const action = mixer.clipAction(clip);
-    action.clampWhenFinished = true;
-    action.setLoop(THREE.LoopOnce, 1);
-
-    action.play(); // activate the action in the mixer first
-
-    if (state === "closed") {
-      mixer.setTime(0); // set time WHILE unpaused
-      action.paused = true; // then freeze
-    } else if (state === "open") {
-      mixer.setTime(clip.duration);
-      action.paused = true;
-    } else if (state === "animated") {
-      action.paused = true; // frozen at frame 0, waiting for trigger
-    }
-
-    return { object: instance, mixer, action };
-  }
-
-  // straight: 2m wide, 6m long
-  const s1 = SkeletonUtils.clone(straight.scene);
-  s1.position.set(0, 0, 0);
-  s1.userData = { halfW: 2 / 2, halfD: 6 / 2 };
-  scene.add(s1);
-
-  const x1 = SkeletonUtils.clone(xCorridor.scene);
-  x1.position.set(0, 0, -6);
-  x1.userData = { shape: "cross", halfW: 6 / 2, halfD: 10 / 2, armHalf: 1 }; // armHalf = half-thickness of each arm (2m wide / 2)
-  scene.add(x1);
-
-  const x2 = SkeletonUtils.clone(xCorridor.scene);
-  x2.position.set(0, 0, -16);
-  x2.userData = { shape: "cross", halfW: 6 / 2, halfD: 10 / 2, armHalf: 1 };
-  scene.add(x2);
-
-  // offices: 4m wide (X) and 6m deep
-  const o1 = SkeletonUtils.clone(office.scene);
-  o1.position.set(-5, 0, -6);
-  o1.userData = { halfW: 4 / 2, halfD: 4 / 2 };
-  scene.add(o1);
-
-  const o2 = SkeletonUtils.clone(office.scene);
-  o2.position.set(5, 0, -6);
-  o2.rotation.y = Math.PI;
-  o2.userData = { halfW: 4 / 2, halfD: 4 / 2 };
-  scene.add(o2);
-
-  const o3 = SkeletonUtils.clone(office.scene);
-  o3.position.set(-5, 0, -16);
-  o3.userData = { halfW: 4 / 2, halfD: 4 / 2 };
-  scene.add(o3);
-
-  const o4 = SkeletonUtils.clone(office.scene);
-  o4.position.set(5, 0, -16);
-  o4.rotation.y = Math.PI;
-  o4.userData = { halfW: 4 / 2, halfD: 4 / 2 };
-  scene.add(o4);
-
-  const startDoor = createDoorInstance(new THREE.Vector3(0, 0, 0), 0, "closed");
-
-  const officeDoors = [
-    createDoorInstance(new THREE.Vector3(-2, 0, -6), Math.PI / 2, "open"),
-    createDoorInstance(new THREE.Vector3(2, 0, -6), -Math.PI / 2, "open"),
-    createDoorInstance(new THREE.Vector3(-2, 0, -16), Math.PI / 2, "open"),
-    createDoorInstance(new THREE.Vector3(2, 0, -16), -Math.PI / 2, "open"),
-  ];
-
-  const endDoor = createDoorInstance(new THREE.Vector3(0, 0, -20), 0, "open");
-
-  window.endDoor = endDoor;
-
-  // Add core access room at the end of the corridor
-  const coreAccessRoom = SkeletonUtils.clone(office.scene);
-  coreAccessRoom.rotation.y = -Math.PI / 2;
-  coreAccessRoom.scale.set(1.5, 1, 1);
-  coreAccessRoom.position.set(0, 0, -24);
-  coreAccessRoom.userData = { halfW: 4 / 2, halfD: 6 / 2 };
-  scene.add(coreAccessRoom);
-
-  const gridOriginX = -1;
-  const gridOriginZ = -25.8;
-
-  const layout = [
-    [
-      { type: "corner", rotation: 2 },
-      { type: "corner", rotation: 1 },
-      { type: "straight", rotation: 1 },
-      { type: "corner", rotation: 2 },
-      { type: "straight", rotation: 2 },
-      { type: "corner", rotation: 2 },
-    ],
-    [
-      { type: "corner", rotation: 0 },
-      { type: "corner", rotation: 3 },
-      { type: "corner", rotation: 0 },
-      { type: "corner", rotation: 0 },
-      { type: "straight", rotation: 1 },
-      { type: "corner", rotation: 2 },
-    ],
-  ];
-
-  buildPuzzleGrid({
-    interactionSystem,
-    models: { straight: straightTile.scene, corner: cornerTile.scene },
-    layout,
-    originX: gridOriginX,
-    originZ: gridOriginZ,
-    tileSize: 0.5,
-  });
-
-  // const auxPower = createAuxPowerSource(
-  //   new THREE.Vector3(gridOriginX - 0.6, 0.6, gridOriginZ - 0.25),
-  // );
-  // const containmentInput = createContainmentInput(
-  //   new THREE.Vector3(gridOriginX + 2.5, 0.5, gridOriginZ - 1.5),
-  // );
-  const auxPower = SkeletonUtils.clone(battery.scene);
-  auxPower.position.set(gridOriginX - 0.5, 0.4, gridOriginZ);
-  auxPower.scale.set(0.5, 0.5, 0.5);
-  auxPower.rotation.y = Math.PI / 2;
-
-  const containmentInput = SkeletonUtils.clone(containmentInputGltf.scene);
-  containmentInput.position.set(gridOriginX + 2.5, 0.38, gridOriginZ - 1);
-  containmentInput.scale.set(0.5, 0.5, 0.5);
-
-  const reactorConsole = createReactorConsole(new THREE.Vector3(0, 0.9, -24));
-  scene.add(auxPower, containmentInput, reactorConsole);
-
-  collisionObjects.push(startDoor.object);
-  collisionObjects.push(...officeDoors.map((d) => d.object));
-  collisionObjects.push(endDoor.object);
-
-  rooms = [s1, x1, x2, o1, o2, o3, o4, coreAccessRoom];
-
-  window.isInsideAnyRoom = (px, pz) => {
-    return rooms.some((r) => {
-      const dx = px - r.position.x;
-      const dz = pz - r.position.z;
-
-      if (r.userData.shape === "cross") {
-        const arm = r.userData.armHalf;
-        return (
-          (Math.abs(dx) < arm && Math.abs(dz) < r.userData.halfD) ||
-          (Math.abs(dz) < arm && Math.abs(dx) < r.userData.halfW)
-        );
-      }
-
-      // default: plain rectangle (straight corridor, offices)
-      return Math.abs(dx) < r.userData.halfW && Math.abs(dz) < r.userData.halfD;
-    });
-  };
-}
-
-buildLevel();
+const controls = new PlayerControls(camera, renderer.domElement);
+controls.setObstacles(level.collisionObjects);
+controls.setWalkable(level.isInside);
 
 createFlashlight(camera);
-
-const robot = await loadFBX("assets/robot.fbx");
-//const robotInstance = SkeletonUtils.clone(robot.scene);
-robot.position.set(0, 0, -2);
-robot.rotation.y = Math.PI;
-robot.scale.set(0.1, 0.1, 0.1);
-scene.add(robot);
-
-const walkFbx = await loadFBX("assets/Walking.fbx");
-const walkClip = walkFbx.animations[0];
-
-const robotMixer = new THREE.AnimationMixer(robot);
-const idleFbx = await loadFBX("assets/Idle.fbx");
-const idleClip = idleFbx.animations[0];
-
-const idleAction = robotMixer.clipAction(idleClip);
-const walkAction = robotMixer.clipAction(walkClip);
-idleAction.play(); // start idle
-
-let currentAction = idleAction;
-let lastPos = camera.position.clone();
-
-function updateLocomotionAnim() {
-  const moved = camera.position.distanceTo(lastPos);
-  lastPos.copy(camera.position);
-
-  const isMoving = moved > 0.001;
-  const nextAction = isMoving ? walkAction : idleAction;
-
-  if (nextAction !== currentAction) {
-    nextAction.reset().fadeIn(0.2).play();
-    currentAction.fadeOut(0.2);
-    currentAction = nextAction;
-  }
-}
-
-const playercontrols = new PlayerControls(camera, renderer.domElement);
-
-const originalUpdate = playercontrols.update.bind(playercontrols);
-playercontrols.update = (delta) => {
-  const oldPos = camera.position.clone();
-  originalUpdate(delta);
-  if (
-    window.isInsideAnyRoom &&
-    !window.isInsideAnyRoom(camera.position.x, camera.position.z)
-  ) {
-    camera.position.copy(oldPos); // hit wall, revert
-  }
-};
-
-playercontrols.setObstacles(collisionObjects);
-
-hud.setLevelTimer(level2Timer);
-
-interactionSystem.register(createKeycard(new THREE.Vector3(-5.5, 0.5, -7.5)));
-interactionSystem.register(createKeycard(new THREE.Vector3(0.5, 0.5, -18.5)));
-interactionSystem.register(createKeycard(new THREE.Vector3(5.5, 0.5, -14.5)));
-
-const level2CheckpointPosition = new THREE.Vector3(0, 0.4, -21);
-
-const securityBeams = [
-  createSecurityBeam(new THREE.Vector3(0, 0, -27), {
-    facing: 0,
-    arc: Math.PI / 2.2,
-    speed: 0.225,
-  }),
-  createSecurityBeam(new THREE.Vector3(2, 0, -25.5), {
-    facing: -Math.PI / 2,
-    arc: Math.PI / 2.2,
-    speed: 0.175,
-  }),
-];
-
-for (const beam of securityBeams) scene.add(beam);
-
-window.addEventListener("resize", () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-
-  renderer.setSize(window.innerWidth, window.innerHeight);
+const robot = await createRobot(scene, camera, controls);
+const levelState = createLevelState({
+  scene,
+  camera,
+  hud,
+  interactionSystem,
+  objectiveTracker,
+  level,
 });
 
+// --- loop ---
 const clock = new THREE.Clock();
 
 function animate() {
   requestAnimationFrame(animate);
-
   const delta = clock.getDelta();
 
-  robotMixer.update(delta);
-
-  playercontrols.update(delta);
-  syncRobotToCamera();
-  updateLocomotionAnim();
+  controls.update(delta);
+  robot.update(delta);
   interactionSystem.update(delta);
-
-  // for (const vent of steamVents) {
-  //   vent.userData.update(delta);
-  // }
-
-  // const wasHitBySteam = checkSteamVentHit(
-  //   camera,
-  //   steamVents,
-  //   checkpointPosition
-  // );
-
-  // if (wasHitBySteam) {
-  //   hud.setMessage('Steam vent hit you - returned to checkpoint');
-  // }
-
-  // updatePowerPuzzle(powerJunctions, reactorConsole);
-
-  for (const beam of securityBeams) {
-    beam.userData.update(delta);
-  }
-
-  const wasHitByBeam = checkSecurityBeamHit(
-    camera,
-    securityBeams,
-    level2CheckpointPosition,
-  );
-
-  if (wasHitByBeam) {
-    hud.setMessage("Security beam hit you - returned to control room entrance");
-  }
-
-  // level2Timer.update(delta);
-
-  // const isPuzzleComplete = updatePowerPuzzle(powerJunctions, reactorConsole);
-
-  // if (isPuzzleComplete) {
-  //   level2Timer.stop();
-  // }
-
-  // if (level2Timer.isFinished() && !reactorConsole.userData.isComplete) {
-  //   camera.position.copy(level2CheckpointPosition);
-  //   resetPowerPuzzle(powerJunctions, reactorConsole);
-  //   level2Timer.reset();
-  //   hud.setMessage('Timer expired - puzzle reset');
-  // }
-
-  // hud.update();
-
-  // if (!gameOver) {
-  //   reactorCore.userData.update(delta);
-
-  //   const playerInLevel3 = camera.position.z < -30;
-
-  //   if (playerInLevel3) {
-  //     collapseStarted = true;
-  //   }
-
-  //   if (playerInLevel3 && !reactorCore.userData.isSealed) {
-  //     level3Timer.update(delta);
-
-  //     hud.setMessage(`Meltdown Timer: ${level3Timer.getDisplayTime()}s`);
-
-  //     updateCollapseSequence(collapseChunks, delta, collapseStarted);
-
-  //     const wasHitByCollapse = checkCollapseHit(
-  //       camera,
-  //       collapseChunks,
-  //       level3CheckpointPosition
-  //     );
-
-  //     if (wasHitByCollapse) {
-  //       collapseStarted = false;
-  //       resetCollapseSequence(collapseChunks);
-  //       level3Timer.reset();
-  //       hud.setMessage('Corridor collapsed - returned to Level 3 entrance');
-  //     }
-
-  //     if (checkCoreReached(camera, reactorCore)) {
-  //       reactorCore.userData.seal();
-  //       level3Timer.stop();
-  //       gameOver = true;
-  //       hud.setMessage('Core sealed - station saved');
-  //     }
-
-  //     if (level3Timer.isFinished()) {
-  //       gameOver = true;
-  //       hud.setMessage('Meltdown - station lost');
-  //       console.log('Meltdown - station lost');
-  //     }
-  //   }
-  // }
-  // interactionSystem.update(delta);
-  // for (const prop of level1Props.animatedProps) {
-  //   prop.userData.update(delta);
-  // }
-
-  // Open the exit door once all keycards have been collected
-  if (
-    window.endDoor &&
-    !window.endDoor.object.userData.isOpen &&
-    objectiveTracker.isObjectiveComplete()
-  ) {
-    window.endDoor.object.userData.isOpen = true;
-    window.endDoor.object.userData.ignoreCollision = true;
-    window.endDoor.action.paused = false;
-  }
-
-  if (window.endDoor) {
-    window.endDoor.mixer.update(delta);
-  }
+  level.update(delta);
+  levelState.update(delta);
 
   renderer.render(scene, camera);
 }
-
 animate();

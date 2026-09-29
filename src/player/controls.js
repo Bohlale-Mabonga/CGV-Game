@@ -7,132 +7,104 @@ export class PlayerControls {
 
     this.moveSpeed = 2;
     this.lookSpeed = 0.0025;
-
-    this.bounds = null;
     this.collisionRadius = 0.35;
+
+    this.walkable = null; // (x, z) => boolean, e.g. level.isInside
     this.obstacles = [];
 
-    this.keys = {
-      forward: false,
-      back: false,
-      left: false,
-      right: false,
-    };
-
+    this.keys = { forward: false, back: false, left: false, right: false };
     this.euler = new THREE.Euler(0, 0, 0, "YXZ");
     this.isLocked = false;
 
-    document.addEventListener("keydown", (e) => this._onKeyDown(e));
-    document.addEventListener("keyup", (e) => this._onKeyUp(e));
+    // scratch objects so update() doesn't allocate every frame
+    this._forward = new THREE.Vector3();
+    this._right = new THREE.Vector3();
+    this._move = new THREE.Vector3();
+    this._probe = new THREE.Vector3();
+    this._closest = new THREE.Vector3();
+    this._box = new THREE.Box3();
+
+    document.addEventListener("keydown", (e) => this._setKey(e.code, true));
+    document.addEventListener("keyup", (e) => this._setKey(e.code, false));
     document.addEventListener("mousemove", (e) => this._onMouseMove(e));
 
-    domElement.addEventListener("click", () => {
-      domElement.requestPointerLock();
-    });
-
+    domElement.addEventListener("click", () => domElement.requestPointerLock());
     document.addEventListener("pointerlockchange", () => {
       this.isLocked = document.pointerLockElement === domElement;
     });
   }
+
   getYaw() {
     return this.euler.y;
   }
 
-  setBounds(bounds) {
-    this.bounds = bounds;
+  setWalkable(fn) {
+    this.walkable = fn;
   }
 
   setObstacles(obstacles) {
     this.obstacles = obstacles;
   }
 
-  _onKeyDown(e) {
-    if (e.code === "KeyW") this.keys.forward = true;
-    if (e.code === "KeyS") this.keys.back = true;
-    if (e.code === "KeyA") this.keys.left = true;
-    if (e.code === "KeyD") this.keys.right = true;
-  }
-
-  _onKeyUp(e) {
-    if (e.code === "KeyW") this.keys.forward = false;
-    if (e.code === "KeyS") this.keys.back = false;
-    if (e.code === "KeyA") this.keys.left = false;
-    if (e.code === "KeyD") this.keys.right = false;
+  _setKey(code, down) {
+    if (code === "KeyW") this.keys.forward = down;
+    if (code === "KeyS") this.keys.back = down;
+    if (code === "KeyA") this.keys.left = down;
+    if (code === "KeyD") this.keys.right = down;
   }
 
   _onMouseMove(e) {
     if (!this.isLocked) return;
 
     this.euler.setFromQuaternion(this.camera.quaternion);
-
     this.euler.y -= e.movementX * this.lookSpeed;
     this.euler.x -= e.movementY * this.lookSpeed;
-
     this.euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.euler.x));
-
     this.camera.quaternion.setFromEuler(this.euler);
-  }
-
-  _applyBounds() {
-    if (!this.bounds) return;
-
-    this.camera.position.x = THREE.MathUtils.clamp(
-      this.camera.position.x,
-      this.bounds.minX,
-      this.bounds.maxX,
-    );
-
-    this.camera.position.z = THREE.MathUtils.clamp(
-      this.camera.position.z,
-      this.bounds.minZ,
-      this.bounds.maxZ,
-    );
   }
 
   _collidesWithObstacle(position) {
     for (const obstacle of this.obstacles) {
       if (obstacle.userData.ignoreCollision) continue;
-
-      const box = new THREE.Box3().setFromObject(obstacle);
-
-      const closestPoint = box.clampPoint(position, new THREE.Vector3());
-      const distance = closestPoint.distanceTo(position);
-
-      if (distance < this.collisionRadius) {
-        return true;
-      }
+      this._box.setFromObject(obstacle);
+      this._box.clampPoint(position, this._closest);
+      if (this._closest.distanceTo(position) < this.collisionRadius) return true;
     }
-
     return false;
   }
 
-  _tryMove(moveVector) {
-    if (moveVector.lengthSq() === 0) return;
+  _canStandAt(x, z) {
+    if (this.walkable && !this.walkable(x, z)) return false;
+    this._probe.set(x, this.camera.position.y, z);
+    return !this._collidesWithObstacle(this._probe);
+  }
 
-    const originalPosition = this.camera.position.clone();
-
-    this.camera.position.add(moveVector);
-    this._applyBounds();
-
-    if (this._collidesWithObstacle(this.camera.position)) {
-      this.camera.position.copy(originalPosition);
-    }
+  // Each axis is resolved separately so you slide along walls instead of sticking.
+  _tryMove(move) {
+    const p = this.camera.position;
+    if (this._canStandAt(p.x + move.x, p.z)) p.x += move.x;
+    if (this._canStandAt(p.x, p.z + move.z)) p.z += move.z;
   }
 
   update(delta) {
-    const speed = this.moveSpeed * delta;
+    const { forward, back, left, right } = this.keys;
+    const fwd = (forward ? 1 : 0) - (back ? 1 : 0);
+    const side = (right ? 1 : 0) - (left ? 1 : 0);
+    if (!fwd && !side) return;
 
-    const forward = new THREE.Vector3();
-    this.camera.getWorldDirection(forward);
-    forward.y = 0;
-    forward.normalize();
+    this.camera.getWorldDirection(this._forward);
+    this._forward.y = 0;
+    this._forward.normalize();
+    this._right.crossVectors(this._forward, this.camera.up).normalize();
 
-    const right = new THREE.Vector3();
-    right.crossVectors(forward, this.camera.up).normalize();
+    // one combined vector, normalized, so diagonals aren't faster
+    this._move
+      .set(0, 0, 0)
+      .addScaledVector(this._forward, fwd)
+      .addScaledVector(this._right, side)
+      .normalize()
+      .multiplyScalar(this.moveSpeed * delta);
 
-    if (this.keys.forward) this._tryMove(forward.clone().multiplyScalar(speed));
-    if (this.keys.back) this._tryMove(forward.clone().multiplyScalar(-speed));
-    if (this.keys.left) this._tryMove(right.clone().multiplyScalar(-speed));
-    if (this.keys.right) this._tryMove(right.clone().multiplyScalar(speed));
+    this._tryMove(this._move);
   }
 }
