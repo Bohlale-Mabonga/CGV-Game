@@ -122,6 +122,8 @@ async function buildLevel() {
     coreAccessGltf,
     straightTile,
     cornerTile,
+    battery,
+    containmentInputGltf,
   ] = await Promise.all([
     load("assets/straight-corridor.glb"),
     load("assets/x-corridor.glb"),
@@ -130,6 +132,8 @@ async function buildLevel() {
     load("assets/core_access.glb"),
     load("assets/s_tile.glb"),
     load("assets/c_tile.glb"),
+    load("assets/battery.glb"),
+    load("assets/containment.glb"),
   ]);
 
   const door = doorGltf.scene;
@@ -211,22 +215,20 @@ async function buildLevel() {
     createDoorInstance(new THREE.Vector3(2, 0, -16), -Math.PI / 2, "open"),
   ];
 
-  const endDoor = createDoorInstance(
-    new THREE.Vector3(0, 0, -20),
-    0,
-    "animated",
-  );
+  const endDoor = createDoorInstance(new THREE.Vector3(0, 0, -20), 0, "open");
 
   window.endDoor = endDoor;
 
   // Add core access room at the end of the corridor
-  const coreAccessRoom = SkeletonUtils.clone(coreAccessGltf.scene);
-  coreAccessRoom.position.set(0, 0, -24.75);
-  coreAccessRoom.userData = { halfW: 8 / 2, halfD: 8 / 2 };
+  const coreAccessRoom = SkeletonUtils.clone(office.scene);
+  coreAccessRoom.rotation.y = -Math.PI / 2;
+  coreAccessRoom.scale.set(1.5, 1, 1);
+  coreAccessRoom.position.set(0, 0, -24);
+  coreAccessRoom.userData = { halfW: 4 / 2, halfD: 6 / 2 };
   scene.add(coreAccessRoom);
 
-  const gridOriginX = -2.5;
-  const gridOriginZ = -26;
+  const gridOriginX = -1;
+  const gridOriginZ = -25.8;
 
   const layout = [
     [
@@ -256,12 +258,21 @@ async function buildLevel() {
     tileSize: 0.5,
   });
 
-  const auxPower = createAuxPowerSource(
-    new THREE.Vector3(gridOriginX - 0.6, 0.6, gridOriginZ - 0.25),
-  );
-  const containmentInput = createContainmentInput(
-    new THREE.Vector3(gridOriginX + 2.5, 0.5, gridOriginZ - 1.5),
-  );
+  // const auxPower = createAuxPowerSource(
+  //   new THREE.Vector3(gridOriginX - 0.6, 0.6, gridOriginZ - 0.25),
+  // );
+  // const containmentInput = createContainmentInput(
+  //   new THREE.Vector3(gridOriginX + 2.5, 0.5, gridOriginZ - 1.5),
+  // );
+  const auxPower = SkeletonUtils.clone(battery.scene);
+  auxPower.position.set(gridOriginX - 0.5, 0.4, gridOriginZ);
+  auxPower.scale.set(0.5, 0.5, 0.5);
+  auxPower.rotation.y = Math.PI / 2;
+
+  const containmentInput = SkeletonUtils.clone(containmentInputGltf.scene);
+  containmentInput.position.set(gridOriginX + 2.5, 0.38, gridOriginZ - 1);
+  containmentInput.scale.set(0.5, 0.5, 0.5);
+
   const reactorConsole = createReactorConsole(new THREE.Vector3(0, 0.9, -24));
   scene.add(auxPower, containmentInput, reactorConsole);
 
@@ -305,7 +316,7 @@ const walkFbx = await loadFBX("assets/Walking.fbx");
 const walkClip = walkFbx.animations[0];
 
 const robotMixer = new THREE.AnimationMixer(robot);
-const idleFbx = await loadFBX("assets/Idle.fbx"); // grab an idle clip from Mixamo too
+const idleFbx = await loadFBX("assets/Idle.fbx");
 const idleClip = idleFbx.animations[0];
 
 const idleAction = robotMixer.clipAction(idleClip);
@@ -319,7 +330,7 @@ function updateLocomotionAnim() {
   const moved = camera.position.distanceTo(lastPos);
   lastPos.copy(camera.position);
 
-  const isMoving = moved > 0.001; // tune threshold to your movement speed * expected delta
+  const isMoving = moved > 0.001;
   const nextAction = isMoving ? walkAction : idleAction;
 
   if (nextAction !== currentAction) {
@@ -354,13 +365,13 @@ interactionSystem.register(createKeycard(new THREE.Vector3(5.5, 0.5, -14.5)));
 const level2CheckpointPosition = new THREE.Vector3(0, 0.4, -21);
 
 const securityBeams = [
-  createSecurityBeam(new THREE.Vector3(0, 0, -26), {
-    facing: 0, // aimed back across the grid from the opposite side
+  createSecurityBeam(new THREE.Vector3(0, 0, -27), {
+    facing: 0,
     arc: Math.PI / 2.2,
     speed: 0.225,
   }),
-  createSecurityBeam(new THREE.Vector3(-3.2, 0, -26), {
-    facing: Math.PI / 2, // aimed toward +Z-ish, tweak per your room orientation
+  createSecurityBeam(new THREE.Vector3(2, 0, -25.5), {
+    facing: -Math.PI / 2,
     arc: Math.PI / 2.2,
     speed: 0.175,
   }),
