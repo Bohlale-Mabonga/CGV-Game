@@ -10,17 +10,17 @@ const GRID_ORIGIN = { x: -1, z: -25.8 };
 
 const PUZZLE_LAYOUT = [
   [
-    { type: "corner", rotation: 2 },
-    { type: "corner", rotation: 1 },
+    { type: "corner", rotation: 3 },
+    { type: "corner", rotation: 3 },
     { type: "straight", rotation: 1 },
-    { type: "corner", rotation: 2 },
-    { type: "straight", rotation: 2 },
-    { type: "corner", rotation: 2 },
+    { type: "corner", rotation: 0 },
+    { type: "straight", rotation: 1 },
+    { type: "corner", rotation: 0 },
   ],
   [
-    { type: "corner", rotation: 0 },
+    { type: "corner", rotation: 1 },
     { type: "corner", rotation: 3 },
-    { type: "corner", rotation: 0 },
+    { type: "corner", rotation: 3 },
     { type: "corner", rotation: 0 },
     { type: "straight", rotation: 1 },
     { type: "corner", rotation: 2 },
@@ -43,7 +43,10 @@ export async function buildLevel({ scene, interactionSystem }) {
 
   const puzzle = buildPuzzleGrid({
     interactionSystem,
-    models: { straight: assets.straightTile.scene, corner: assets.cornerTile.scene },
+    models: {
+      straight: assets.straightTile.scene,
+      corner: assets.cornerTile.scene,
+    },
     layout: PUZZLE_LAYOUT,
     originX: GRID_ORIGIN.x,
     originZ: GRID_ORIGIN.z,

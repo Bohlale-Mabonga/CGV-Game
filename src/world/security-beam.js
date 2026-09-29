@@ -2,9 +2,12 @@ import * as THREE from "three";
 
 const DEFAULT_LENGTH = 3;
 const DEFAULT_ARC = Math.PI / 3; // total sweep width, in radians
-const DEFAULT_SPEED = 0.5; // radians/sec
+const DEFAULT_SPEED = 0.2; // radians/sec
 const DEFAULT_HEIGHT = 0.3; // must match the player's eye/collision height
 const DEFAULT_BEAM_RADIUS = 0.005;
+
+const ACTIVE_COLOR = 0xff3344;
+const DISABLED_COLOR = 0x44ff66;
 
 export function createSecurityBeam(
   position,
@@ -64,9 +67,20 @@ export function createSecurityBeam(
   group.userData.maxAngle = startAngle + arc;
   group.userData.speed = speed;
   group.userData.dir = 1;
+  group.userData.enabled = true;
+
+  group.userData.setEnabled = (enabled) => {
+    group.userData.enabled = enabled;
+
+    emitter.material.emissive.set(enabled ? ACTIVE_COLOR : DISABLED_COLOR);
+    beam.material.color.set(enabled ? ACTIVE_COLOR : DISABLED_COLOR);
+    light.color.set(enabled ? ACTIVE_COLOR : DISABLED_COLOR);
+  };
 
   group.userData.update = (delta) => {
     const d = group.userData;
+    if (!d.enabled) return;
+
     d.angle += d.speed * d.dir * delta;
 
     if (d.angle > d.maxAngle) {
@@ -126,6 +140,8 @@ export function checkSecurityBeamHit(
   const playerPos = camera.position;
 
   for (const beamGroup of securityBeams) {
+    if (!beamGroup.userData.enabled) continue;
+
     const beamHeight = beamGroup.userData.height;
 
     if (Math.abs(playerPos.y - beamHeight) > 1.0) continue;

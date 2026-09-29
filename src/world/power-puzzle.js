@@ -10,11 +10,9 @@ const OPPOSITE = { N: "S", S: "N", E: "W", W: "E" };
 const ROT_ORDER = ["N", "W", "S", "E"];
 
 // Open sides of each tile model at rotation 0.
-// VERIFY against your s_tile.glb / c_tile.glb; if the paths never connect
-// where they visibly should, this table is the first place to look.
 const BASE_PORTS = {
   straight: ["N", "S"],
-  corner: ["N", "E"],
+  corner: ["S", "E"],
 };
 
 export function openPorts(type, rotation) {
@@ -108,7 +106,11 @@ export function buildPuzzleGrid({
   layout.forEach((row, rowIdx) => {
     row.forEach((def, colIdx) => {
       const mesh = SkeletonUtils.clone(models[def.type]);
-      mesh.position.set(originX + colIdx * tileSize, 0.001, originZ - rowIdx * tileSize);
+      mesh.position.set(
+        originX + colIdx * tileSize,
+        0.001,
+        originZ - rowIdx * tileSize,
+      );
       mesh.rotation.y = (def.rotation * Math.PI) / 2;
 
       const cell = {
