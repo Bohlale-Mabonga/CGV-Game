@@ -1,14 +1,20 @@
+import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader.js";
 
 const gltfLoader = new GLTFLoader();
 const fbxLoader = new FBXLoader();
+const textureLoader = new THREE.TextureLoader();
 
 export const loadGLTF = (url) =>
   new Promise((resolve, reject) => gltfLoader.load(url, resolve, undefined, reject));
 
 export const loadFBX = (url) =>
   new Promise((resolve, reject) => fbxLoader.load(url, resolve, undefined, reject));
+
+/** Resolves once the bitmap is decoded, so `texture.image` is safe to slice. */
+export const loadTexture = (url) =>
+  new Promise((resolve, reject) => textureLoader.load(url, resolve, undefined, reject));
 
 const LEVEL_GLTFS = {
   straight: "assets/straight-corridor.glb",
