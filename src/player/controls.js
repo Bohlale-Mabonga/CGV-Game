@@ -7,11 +7,8 @@ export class PlayerControls {
 
     this.moveSpeed = 2;
     this.lookSpeed = 0.0025;
-    this.collisionRadius = 0.35;
 
-    this.walkable = null; // (x, z) => boolean, e.g. level.isInside
-    this.obstacles = [];
-
+    this.body = null; // Body from the player, e.g. robot.body
     this.keys = { forward: false, back: false, left: false, right: false };
     this.euler = new THREE.Euler(0, 0, 0, "YXZ");
     this.isLocked = false;
@@ -20,9 +17,6 @@ export class PlayerControls {
     this._forward = new THREE.Vector3();
     this._right = new THREE.Vector3();
     this._move = new THREE.Vector3();
-    this._probe = new THREE.Vector3();
-    this._closest = new THREE.Vector3();
-    this._box = new THREE.Box3();
 
     document.addEventListener("keydown", (e) => this._setKey(e.code, true));
     document.addEventListener("keyup", (e) => this._setKey(e.code, false));
@@ -38,12 +32,8 @@ export class PlayerControls {
     return this.euler.y;
   }
 
-  setWalkable(fn) {
-    this.walkable = fn;
-  }
-
-  setObstacles(obstacles) {
-    this.obstacles = obstacles;
+  setBody(body) {
+    this.body = body;
   }
 
   _setKey(code, down) {
@@ -63,27 +53,13 @@ export class PlayerControls {
     this.camera.quaternion.setFromEuler(this.euler);
   }
 
-  _collidesWithObstacle(position) {
-    for (const obstacle of this.obstacles) {
-      if (obstacle.userData.ignoreCollision) continue;
-      this._box.setFromObject(obstacle);
-      this._box.clampPoint(position, this._closest);
-      if (this._closest.distanceTo(position) < this.collisionRadius) return true;
-    }
-    return false;
-  }
-
-  _canStandAt(x, z) {
-    if (this.walkable && !this.walkable(x, z)) return false;
-    this._probe.set(x, this.camera.position.y, z);
-    return !this._collidesWithObstacle(this._probe);
-  }
-
-  // Each axis is resolved separately so you slide along walls instead of sticking.
+  // The robot body decides which positions are legal; each axis is resolved
+  // separately so you slide along walls instead of sticking.
   _tryMove(move) {
-    const p = this.camera.position;
-    if (this._canStandAt(p.x + move.x, p.z)) p.x += move.x;
-    if (this._canStandAt(p.x, p.z + move.z)) p.z += move.z;
+    if (this.body === null) {
+      throw new Error("PlayerControls: setBody() must be called before moving.");
+    }
+    this.body.move(this.camera.position, move.x, move.z);
   }
 
   update(delta) {

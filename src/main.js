@@ -62,11 +62,13 @@ cameraRig.setOccluders([
 ]);
 
 const controls = new PlayerControls(camera, renderer.domElement);
-controls.setObstacles(level.collisionObjects);
-controls.setWalkable(level.isInside);
 
 createFlashlight(camera);
-const robot = await createRobot(scene, camera, controls);
+const robot = await createRobot(scene, camera, controls, {
+  walkable: level.isInside,
+  obstacles: level.collisionObjects,
+});
+controls.setBody(robot.body);
 const levelState = createLevelState({
   scene,
   camera,

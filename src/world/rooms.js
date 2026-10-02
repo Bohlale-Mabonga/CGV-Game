@@ -12,7 +12,14 @@ const ROOMS = [
   { model: "office", pos: [-5, -16], halfW: 2, halfD: 2 },
   { model: "office", pos: [5, -16], rot: PI, halfW: 2, halfD: 2 },
   // core access room: a stretched office
-  { model: "office", pos: [0, -24], rot: -PI / 2, scale: [1.5, 1, 1], halfW: 2, halfD: 3 },
+  {
+    model: "coreAccess",
+    pos: [0, -24],
+    rot: -PI / 2,
+    scale: [1.5, 1, 1],
+    halfW: 2,
+    halfD: 3,
+  },
 ];
 
 function containsPoint(def, x, z) {

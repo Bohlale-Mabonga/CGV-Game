@@ -1,8 +1,9 @@
 import * as THREE from "three";
 import { loadFBX } from "../core/assets.js";
+import { Body } from "./collision.js";
 
-/** Third-person body that follows the first-person camera. */
-export async function createRobot(scene, camera, controls) {
+/** Third-person body that follows the first-person camera, and defines where it may stand. */
+export async function createRobot(scene, camera, controls, { walkable, obstacles } = {}) {
   const [model, walkFbx, idleFbx] = await Promise.all([
     loadFBX("assets/robot.fbx"),
     loadFBX("assets/Walking.fbx"),
@@ -11,8 +12,12 @@ export async function createRobot(scene, camera, controls) {
 
   model.position.set(0, 0, -2);
   model.rotation.y = Math.PI;
-  model.scale.setScalar(0.1);
+  model.scale.setScalar(0.11);
   scene.add(model);
+
+  // The body is the collision authority: movement is only allowed where it fits,
+  // and it gets the final say on the player position each frame.
+  const body = new Body({ walkable, obstacles });
 
   const mixer = new THREE.AnimationMixer(model);
   const idle = mixer.clipAction(idleFbx.animations[0]);
@@ -37,9 +42,16 @@ export async function createRobot(scene, camera, controls) {
 
   return {
     model,
+    body,
     update(delta) {
       mixer.update(delta);
-      model.position.set(camera.position.x, camera.position.y - eyeHeight, camera.position.z);
+      // catches a shrinking obstacle (a closing door) that the body was already inside
+      body.depenetrate(camera.position);
+      model.position.set(
+        camera.position.x,
+        camera.position.y - eyeHeight,
+        camera.position.z,
+      );
       model.rotation.y = controls.getYaw() + Math.PI;
       updateLocomotion();
     },

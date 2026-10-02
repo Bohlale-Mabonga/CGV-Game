@@ -1,5 +1,5 @@
 export class InteractionSystem {
-  constructor(camera, scene, objectiveTracker, hud, range = 2) {
+  constructor(camera, scene, objectiveTracker, hud, range = 1) {
     this.camera = camera;
     this.scene = scene;
     this.objectiveTracker = objectiveTracker;
