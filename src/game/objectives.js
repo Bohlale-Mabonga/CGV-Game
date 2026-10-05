@@ -6,7 +6,7 @@ export class ObjectiveTracker {
   }
 
   collectKeycard() {
-    this.keycardsCollected++;
+    this.keycardsCollected = Math.min(this.requiredKeycards, this.keycardsCollected + 1);
 
     console.log(
       `Keycard collected: ${this.keycardsCollected}/${this.requiredKeycards}`
@@ -15,6 +15,11 @@ export class ObjectiveTracker {
     if (this.onChange) {
       this.onChange();
     }
+  }
+
+  restoreKeycards(count) {
+    this.keycardsCollected = Math.min(this.requiredKeycards, Math.max(0, count));
+    if (this.onChange) this.onChange();
   }
 
   isObjectiveComplete() {

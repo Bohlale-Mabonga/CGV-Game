@@ -14,6 +14,7 @@ function createWallSegment(side, startZ, segmentLength, height, width, material)
     height / 2,
     startZ + segmentLength / 2
   );
+  wall.receiveShadow = true;
 
   return wall;
 }
@@ -71,16 +72,16 @@ export function createCorridorSegment(
   const segment = new THREE.Group();
 
   const wallMaterial = new THREE.MeshStandardMaterial({
-    color: 0x555a63,
-    roughness: 0.8,
-    metalness: 0.25,
+    color: 0x303b48,
+    roughness: 0.65,
+    metalness: 0.55,
     side: THREE.DoubleSide
   });
 
   const floorMaterial = new THREE.MeshStandardMaterial({
-    color: 0x2e3138,
-    roughness: 0.9,
-    metalness: 0.1,
+    color: 0x161e27,
+    roughness: 0.72,
+    metalness: 0.38,
     side: THREE.DoubleSide
   });
 
@@ -89,7 +90,21 @@ export function createCorridorSegment(
     floorMaterial
   );
   floor.rotation.x = -Math.PI / 2;
+  floor.receiveShadow = true;
   segment.add(floor);
+
+  const seamMaterial = new THREE.MeshBasicMaterial({ color: 0x263b4b });
+  for (let z = -length / 2 + 1; z < length / 2; z += 2) {
+    const seam = new THREE.Mesh(new THREE.BoxGeometry(width - 0.18, 0.012, 0.025), seamMaterial);
+    seam.position.set(0, 0.012, z);
+    segment.add(seam);
+  }
+
+  for (const x of [-width * 0.32, width * 0.32]) {
+    const lane = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.018, length - 0.2), new THREE.MeshBasicMaterial({ color: 0x1b7186 }));
+    lane.position.set(x, 0.018, 0);
+    segment.add(lane);
+  }
 
   const ceiling = new THREE.Mesh(
     new THREE.PlaneGeometry(width, length),
@@ -98,6 +113,24 @@ export function createCorridorSegment(
   ceiling.rotation.x = Math.PI / 2;
   ceiling.position.y = height;
   segment.add(ceiling);
+
+  const ceilingLightMaterial = new THREE.MeshBasicMaterial({ color: 0x8eeaff });
+  for (let z = -length / 2 + 1.5; z < length / 2; z += 3) {
+    const panel = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.035, 0.32), ceilingLightMaterial);
+    panel.position.set(0, height - 0.025, z);
+    segment.add(panel);
+    const light = new THREE.PointLight(0x37c8ff, 0.32, 3.5);
+    light.position.set(0, height - 0.15, z);
+    segment.add(light);
+  }
+
+  const pipeMaterial = new THREE.MeshStandardMaterial({ color: 0x596a78, metalness: 0.8, roughness: 0.3 });
+  for (const x of [-width / 2 + 0.24, width / 2 - 0.24]) {
+    const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, length, 10), pipeMaterial);
+    pipe.rotation.x = Math.PI / 2;
+    pipe.position.set(x, height - 0.26, 0);
+    segment.add(pipe);
+  }
 
   createWallWithOpenings(
     segment,
@@ -144,7 +177,12 @@ export function createSideRoom(width = 4, depth = 4, height = 3) {
     floorMaterial
   );
   floor.rotation.x = -Math.PI / 2;
+  floor.receiveShadow = true;
   room.add(floor);
+
+  const floorGrid = new THREE.GridHelper(Math.min(width, depth) - 0.2, 8, 0x1d5f73, 0x142a35);
+  floorGrid.position.y = 0.018;
+  floor.add(floorGrid);
 
   const ceiling = new THREE.Mesh(
     new THREE.PlaneGeometry(width, depth),
@@ -180,6 +218,15 @@ export function createSideRoom(width = 4, depth = 4, height = 3) {
   const roomLight = new THREE.PointLight(0x37c8ff, 1.2, 5);
   roomLight.position.set(0, 2.4, 0);
   room.add(roomLight);
+
+  const consoleMaterial = new THREE.MeshStandardMaterial({ color: 0x101822, metalness: 0.7, roughness: 0.35 });
+  const console = new THREE.Mesh(new THREE.BoxGeometry(width * 0.7, 0.75, 0.42), consoleMaterial);
+  console.position.set(0, 0.38, -depth / 2 + 0.38);
+  room.add(console);
+  const consoleScreen = new THREE.Mesh(new THREE.PlaneGeometry(width * 0.42, 0.22), new THREE.MeshBasicMaterial({ color: 0x37c8ff }));
+  consoleScreen.position.set(0, 0.65, -depth / 2 + 0.15);
+  consoleScreen.rotation.x = -0.18;
+  room.add(consoleScreen);
 
   return room;
 }

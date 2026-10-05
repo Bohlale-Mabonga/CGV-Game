@@ -54,6 +54,11 @@ export function createKeycard(position) {
   group.userData.onInteract = (objectiveTracker, scene) => {
     objectiveTracker.collectKeycard();
     scene.remove(group);
+    try {
+      localStorage.setItem('core-breach-keycards', String(objectiveTracker.keycardsCollected));
+    } catch (error) {
+      // Persistence is a quality-of-life feature; private browsing may disable it.
+    }
   };
 
   return group;

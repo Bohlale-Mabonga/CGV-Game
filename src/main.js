@@ -1,5 +1,6 @@
 import './style.css';
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 import { PlayerControls } from './player/controls.js';
 import { InteractionSystem } from './player/interaction-system.js';
@@ -48,6 +49,24 @@ import {
 import { Minimap } from './ui/minimap.js';
 
 import { createSign } from './world/signage.js';
+import { createSparkField, createHeatHaze } from './world/particle-effects.js';
+import { StationAudio } from './audio/station-audio.js';
+
+function createNeonStrip(position, color = 0x37c8ff, rotationY = 0) {
+  const strip = new THREE.Mesh(
+    new THREE.BoxGeometry(0.06, 0.06, 3.2),
+    new THREE.MeshBasicMaterial({ color })
+  );
+  strip.position.copy(position);
+  strip.rotation.y = rotationY;
+  const light = new THREE.PointLight(color, 0.8, 3.5);
+  light.position.copy(position);
+  strip.add(light);
+  strip.userData.update = (delta) => {
+    light.intensity = 0.55 + Math.sin(performance.now() * 0.004 + position.z) * 0.25;
+  };
+  return strip;
+}
 
 function createPlayerRobot() {
   const group = new THREE.Group();
@@ -83,9 +102,75 @@ function createPlayerRobot() {
   eye.position.set(0, 1.07, -0.18);
   group.add(eye);
 
+  const shoulderMaterial = new THREE.MeshStandardMaterial({
+    color: 0x263442,
+    metalness: 0.85,
+    roughness: 0.3,
+    emissive: 0x07131e,
+    emissiveIntensity: 0.8
+  });
+  for (const side of [-1, 1]) {
+    const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.14, 12, 8), shoulderMaterial);
+    shoulder.scale.set(1, 0.7, 0.85);
+    shoulder.position.set(side * 0.36, 0.66, 0);
+    group.add(shoulder);
+  }
+
+  const antenna = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.018, 0.018, 0.24, 8),
+    new THREE.MeshBasicMaterial({ color: 0xff3eb5 })
+  );
+  antenna.position.set(0, 1.32, 0);
+  group.add(antenna);
+  const antennaLight = new THREE.PointLight(0xff3eb5, 0.7, 1.5);
+  antennaLight.position.set(0, 1.46, 0);
+  group.add(antennaLight);
+
+  group.userData.update = (delta) => {
+    if (!group.visible) return;
+    group.position.y = 0.75 + Math.sin(performance.now() * 0.006) * 0.018;
+    antennaLight.intensity = 0.55 + Math.sin(performance.now() * 0.01) * 0.2;
+  };
+
   group.visible = false;
 
   return group;
+}
+
+function loadRobotAsset(target) {
+  const loader = new GLTFLoader();
+  loader.load('./assets/models/maintenance-robot.glb', (gltf) => {
+    const model = gltf.scene;
+    model.scale.setScalar(0.72);
+    model.position.set(0, -0.7, 0);
+    model.traverse((object) => {
+      if (!object.isMesh) return;
+      object.castShadow = true;
+      object.receiveShadow = true;
+    });
+    target.children.slice().forEach((child) => target.remove(child));
+    target.add(model);
+    target.userData.assetLoaded = true;
+  }, undefined, (error) => {
+    console.warn('Original robot asset unavailable; using procedural fallback.', error);
+  });
+}
+
+function loadSceneAsset(path, parent, position = new THREE.Vector3(), scale = 1) {
+  const loader = new GLTFLoader();
+  loader.load(path, (gltf) => {
+    const model = gltf.scene;
+    model.position.copy(position);
+    model.scale.setScalar(scale);
+    model.traverse((object) => {
+      if (!object.isMesh) return;
+      object.castShadow = true;
+      object.receiveShadow = true;
+    });
+    parent.add(model);
+  }, undefined, (error) => {
+    console.warn(`Optional asset unavailable: ${path}`, error);
+  });
 }
 
 const scene = new THREE.Scene();
@@ -103,23 +188,32 @@ camera.position.set(0, 1.6, 6);
 camera.lookAt(0, 1.5, -4);
 scene.add(camera);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.95;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 const app = document.querySelector('#app');
 app.appendChild(renderer.domElement);
+const stationAudio = new StationAudio();
 
-scene.add(new THREE.AmbientLight(0x9fc9ff, 0.28));
+scene.add(new THREE.HemisphereLight(0x79bfff, 0x100912, 0.48));
 
 const debugLight = new THREE.DirectionalLight(0xbfdfff, 0.45);
 debugLight.position.set(3, 6, 4);
+debugLight.castShadow = true;
+debugLight.shadow.mapSize.set(1024, 1024);
+debugLight.shadow.camera.left = -12;
+debugLight.shadow.camera.right = 12;
+debugLight.shadow.camera.top = 10;
+debugLight.shadow.camera.bottom = -45;
 scene.add(debugLight);
 
-const corridor = createCorridorSegment(22, 4, 3, [
+const corridor = createCorridorSegment(22, 6, 3.6, [
   // Positions are local to the corridor, whose centre is at world Z = -6.
   { side: 'left', z: 1, width: 2.5 },
   { side: 'right', z: -4, width: 2.5 }
@@ -127,13 +221,19 @@ const corridor = createCorridorSegment(22, 4, 3, [
 corridor.position.z = -6;
 scene.add(corridor);
 
-const leftRoom = createSideRoom(4, 4, 3);
-leftRoom.position.set(-4, 0, -5);
+// Repeating light strips make the three spaces read as one industrial station.
+for (let z = 4; z > -45; z -= 4) {
+  const strip = createNeonStrip(new THREE.Vector3(0, 2.72, z), z < -30 ? 0xff5533 : 0x37c8ff);
+  scene.add(strip);
+}
+
+const leftRoom = createSideRoom(6, 6, 3.6);
+leftRoom.position.set(-4.5, 0, -5);
 leftRoom.rotation.y = -Math.PI / 2;
 scene.add(leftRoom);
 
-const rightRoom = createSideRoom(4, 4, 3);
-rightRoom.position.set(4, 0, -10);
+const rightRoom = createSideRoom(6, 6, 3.6);
+rightRoom.position.set(4.5, 0, -10);
 rightRoom.rotation.y = Math.PI / 2;
 scene.add(rightRoom);
 
@@ -195,6 +295,7 @@ createFlashlight(camera);
 
 const playerRobot = createPlayerRobot();
 scene.add(playerRobot);
+loadRobotAsset(playerRobot);
 
 const controls = new PlayerControls(
   camera,
@@ -210,6 +311,13 @@ controls.setBounds({
 const minimap = new Minimap(controls);
 const objectiveTracker = new ObjectiveTracker(3);
 const hud = new HUD(objectiveTracker);
+
+try {
+  const savedKeycards = Number(localStorage.getItem('core-breach-keycards') || 0);
+  objectiveTracker.restoreKeycards(savedKeycards);
+} catch (error) {
+  // Continue with a fresh run when storage is unavailable.
+}
 
 function setHudPhase(phase) {
   // Supports both the current HUD and an older browser-cached HUD module.
@@ -263,25 +371,30 @@ const keycard1 = createKeycard(new THREE.Vector3(-5.5, 1, -5));
 const keycard2 = createKeycard(new THREE.Vector3(5.5, 1, -10));
 const keycard3 = createKeycard(new THREE.Vector3(0, 1, -13));
 
-interactionSystem.register(keycard1);
-interactionSystem.register(keycard2);
-interactionSystem.register(keycard3);
+if (objectiveTracker.keycardsCollected > 0) {
+  const cards = [keycard1, keycard2, keycard3];
+  cards.slice(0, objectiveTracker.keycardsCollected).forEach((card) => scene.remove(card));
+}
 
-minimap.addMarker(keycard1, 'keycard');
-minimap.addMarker(keycard2, 'keycard');
-minimap.addMarker(keycard3, 'keycard');
+const keycards = [keycard1, keycard2, keycard3];
+keycards.forEach((card, index) => {
+  if (index >= objectiveTracker.keycardsCollected) interactionSystem.register(card);
+});
+
+keycards.forEach((card) => minimap.addMarker(card, 'keycard'));
 
 const level1Door = createDoor(new THREE.Vector3(0, 1.1, -16));
 interactionSystem.register(level1Door);
+loadSceneAsset('./assets/models/industrial-door.glb', level1Door, new THREE.Vector3(0, -1.1, -0.12), 0.7);
 minimap.addMarker(level1Door, 'door');
 
 const level1WalkableAreas = [
   // Main corridor, including the final keycard and locked exit.
   { minX: -1.72, maxX: 1.72, minZ: -15.2, maxZ: 6.2 },
   // Maintenance Bay entrance and room interior.
-  { minX: -6.05, maxX: -1.72, minZ: -7.05, maxZ: -2.95 },
+  { minX: -6.05, maxX: -1.72, minZ: -8.05, maxZ: -2.25 },
   // Storage Bay entrance and room interior.
-  { minX: 1.72, maxX: 6.05, minZ: -12.05, maxZ: -7.95 }
+  { minX: 1.72, maxX: 6.05, minZ: -13.05, maxZ: -6.95 }
 ];
 
 controls.setMovementConstraint((nextPosition) => {
@@ -337,6 +450,7 @@ const reactorConsole = createReactorConsole(
 );
 const controlRoom = createControlRoom(new THREE.Vector3(0, 0, -22));
 scene.add(controlRoom);
+loadSceneAsset('./assets/models/control-console.glb', controlRoom, new THREE.Vector3(-4.3, 0, 0.8), 0.9);
 
 for (const junction of powerJunctions) {
   interactionSystem.register(junction);
@@ -352,13 +466,16 @@ for (const beam of securityBeams) {
   scene.add(beam);
 }
 
-const meltdownCorridor = createCorridorSegment(18, 4, 3);
+const meltdownCorridor = createCorridorSegment(18, 6, 4);
 meltdownCorridor.position.z = -34;
 scene.add(meltdownCorridor);
 
 const reactorCore = createReactorCore(new THREE.Vector3(0, 1.5, -42));
 scene.add(reactorCore);
 minimap.addMarker(reactorCore, 'core');
+const reactorSparks = createSparkField(new THREE.Vector3(0, 1.4, -42), 0xff7b32, 120, 3.2);
+const reactorHeat = createHeatHaze(new THREE.Vector3(0, 0, -42));
+scene.add(reactorSparks, reactorHeat);
 
 const level3Timer = new LevelTimer(45);
 level3Timer.stop();
@@ -374,6 +491,8 @@ const collapseChunks = createCollapseSequence();
 for (const chunk of collapseChunks) {
   scene.add(chunk);
 }
+const collapseSparks = createSparkField(new THREE.Vector3(0, 1.2, -35), 0xffd16b, 80, 5);
+scene.add(collapseSparks);
 
 let collapseStarted = false;
 
@@ -384,10 +503,12 @@ const overlay = new GameOverlay();
 overlay.showMenu();
 
 overlay.onStart = () => {
+  stationAudio.start();
   renderer.domElement.requestPointerLock();
 };
 
 overlay.onRestart = () => {
+  try { localStorage.removeItem('core-breach-keycards'); } catch (error) { /* ignore */ }
   window.location.reload();
 };
 
@@ -411,6 +532,7 @@ function animate() {
   }
 
   controls.update(delta);
+  playerRobot.userData.update?.(delta);
   interactionSystem.update(delta);
 
   for (const vent of steamVents) {
@@ -430,6 +552,7 @@ function animate() {
   for (const beam of securityBeams) {
     beam.userData.update(delta);
   }
+  controlRoom.userData.update?.(delta);
 
   const wasHitByBeam = checkSecurityBeamHit(
     camera,
@@ -456,6 +579,7 @@ function animate() {
   if (inLevel3 && lastPhase !== 'level3') {
     level3Timer.reset();
     collapseStarted = true;
+    stationAudio.alarm();
     hud.setMessage('MELTDOWN SEQUENCE STARTED - sprint to the core!');
   }
 
@@ -502,6 +626,7 @@ function animate() {
       setHudPhase(`MELTDOWN: reach the core  |  ${level3Timer.getDisplayTime()}s`);
 
       updateCollapseSequence(collapseChunks, delta, collapseStarted);
+      collapseSparks.userData.update(delta, 1.2);
 
       const wasHitByCollapse = checkCollapseHit(
         camera,
@@ -533,6 +658,13 @@ function animate() {
         overlay.showGameOver();
       }
     }
+
+    const remaining = level3Timer.timeRemaining;
+    const heatIntensity = reactorCore.userData.isSealed
+      ? 0.2
+      : 0.7 + (1 - remaining / level3Timer.duration) * 0.6;
+    reactorSparks.userData.update(delta, heatIntensity);
+    reactorHeat.userData.update(delta, heatIntensity);
   }
   for (const beacon of level1HintBeacons) {
     beacon.userData.update(delta);

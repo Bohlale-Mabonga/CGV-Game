@@ -11,8 +11,20 @@ body {
 }
 
 body {
-  background: #000;
-  font-family: Arial, Helvetica, sans-serif;
+  background: #02040a;
+  color: #d9f6ff;
+  font-family: 'Trebuchet MS', Arial, Helvetica, sans-serif;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 20;
+  opacity: 0.16;
+  background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(55, 200, 255, 0.08) 4px, transparent 5px);
+  mix-blend-mode: screen;
 }
 
 #app {
@@ -27,10 +39,12 @@ body {
   color: white;
   font-size: 16px;
   line-height: 1.5;
-  background: rgba(0, 0, 0, 0.55);
-  padding: 12px 14px;
-  border: 1px solid rgba(55, 200, 255, 0.45);
-  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(4, 16, 28, 0.9), rgba(4, 5, 12, 0.75));
+  padding: 14px 16px;
+  border: 1px solid rgba(55, 200, 255, 0.55);
+  border-left: 3px solid #37c8ff;
+  border-radius: 2px;
+  box-shadow: 0 0 24px rgba(0, 160, 255, 0.15), inset 0 0 18px rgba(55, 200, 255, 0.04);
   pointer-events: none;
 }
 
@@ -102,16 +116,16 @@ body {
   align-items: center;
   gap: 16px;
   color: white;
-  background:
-    radial-gradient(circle at center, rgba(55, 200, 255, 0.16), transparent 35%),
-    rgba(0, 0, 0, 0.82);
+  background: radial-gradient(circle at center, rgba(55, 200, 255, 0.2), transparent 28%), linear-gradient(135deg, rgba(1, 4, 12, 0.95), rgba(8, 1, 16, 0.96));
   z-index: 10;
 }
 
 .game-overlay h1 {
   margin: 0;
   font-size: 56px;
-  letter-spacing: 0;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-shadow: 0 0 10px #37c8ff, 0 0 32px rgba(255, 62, 181, 0.65);
 }
 
 .game-overlay p {
