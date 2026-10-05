@@ -65,8 +65,18 @@ export async function buildLevel({ scene, interactionSystem }) {
     assets.containment,
     new THREE.Vector3(GRID_ORIGIN.x + 2.5, 0.38, GRID_ORIGIN.z - 1),
   );
+  const emitterMaterial = new THREE.MeshStandardMaterial({
+    color: 0x1c0f0f,
+    emissive: 0xff3344,
+    emissiveIntensity: 0.8,
+  });
+  const emitter = new THREE.Mesh(
+    new THREE.SphereGeometry(0.07, 12, 12),
+    emitterMaterial,
+  );
+  emitter.position.set(GRID_ORIGIN.x + 2.5, 0.38, GRID_ORIGIN.z - 0.9);
   const reactorConsole = createReactorConsole(new THREE.Vector3(0, 0.9, -24));
-  scene.add(auxPower, containmentInput, reactorConsole);
+  scene.add(auxPower, containmentInput, emitter, reactorConsole);
 
   return {
     rooms,
@@ -77,6 +87,16 @@ export async function buildLevel({ scene, interactionSystem }) {
     isInside: (x, z) => rooms.some((r) => r.contains(x, z)),
     update(delta) {
       for (const d of doors.all) d.mixer.update(delta);
+
+      if (puzzle.isSolved()) {
+        emitterMaterial.emissive.setHex(0x33ff33);
+        emitterMaterial.emissiveIntensity = 1;
+      } else {
+        emitterMaterial.emissive.setHex(0xff3344);
+        const t = performance.now() * 0.01;
+        const flicker = Math.abs(Math.sin(t) * 0.6 + Math.sin(t * 2.1) * 0.4);
+        emitterMaterial.emissiveIntensity = 0.3 + 0.5 * flicker;
+      }
     },
   };
 }

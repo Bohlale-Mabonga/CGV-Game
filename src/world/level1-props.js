@@ -140,7 +140,7 @@ export function createContainmentInput(position) {
 
 export function createReactorConsole(position) {
   const mesh = new THREE.Mesh(
-    new THREE.BoxGeometry(1.2, 1, 0.2),
+    new THREE.BoxGeometry(1, 0.7, 0.05),
     new THREE.MeshStandardMaterial({ color: 0x1a1d22 }),
   );
   mesh.position.copy(position);
