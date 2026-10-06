@@ -52,6 +52,8 @@ cd CGV-Game
 
 ## Testing
 
+See [TESTING.md](TESTING.md) for the full guide.
+
 This project uses Vitest to validate the main gameplay systems.
 
 Run the test suite:
