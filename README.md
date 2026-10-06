@@ -1,5 +1,7 @@
 # CGV Game
 
+[![codecov](https://codecov.io/gh/Bohlale-Mabonga/CGV-Game/branch/main/graph/badge.svg)](https://codecov.io/gh/Bohlale-Mabonga/CGV-Game)
+
 A 3D browser game developed for the Computer Graphics and Visualisation
 group project at the University of the Witwatersrand.
 
