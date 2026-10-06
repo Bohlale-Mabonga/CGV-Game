@@ -46,22 +46,31 @@ function findPowered(cells, source) {
   return powered;
 }
 
+const requestFrame =
+  globalThis.requestAnimationFrame ??
+  ((callback) => setTimeout(() => callback(performance.now()), 16));
+
+const cancelFrame =
+  globalThis.cancelAnimationFrame ?? ((handle) => clearTimeout(handle));
+
 // Tween that can be cancelled, so rapid clicks never fight each other.
 function tweenRotationY(mesh, target, ms = 180) {
   const start = mesh.rotation.y;
   const t0 = performance.now();
   let cancelled = false;
+  let frameHandle = 0;
 
   function step(now) {
     if (cancelled) return;
     const t = Math.min(Math.max((now - t0) / ms, 0), 1);
     const eased = 1 - Math.pow(1 - t, 3);
     mesh.rotation.y = start + (target - start) * eased;
-    if (t < 1) requestAnimationFrame(step);
+    if (t < 1) frameHandle = requestFrame(step);
   }
-  requestAnimationFrame(step);
+  frameHandle = requestFrame(step);
   return () => {
     cancelled = true;
+    cancelFrame(frameHandle);
   };
 }
 
@@ -97,10 +106,15 @@ export function buildPuzzleGrid({
 
     onChange?.(powered);
 
-    if (reached && !solved) {
-      solved = true;
-      solvedListeners.forEach((fn) => fn());
+    if (reached) {
+      if (!solved) {
+        solved = true;
+        solvedListeners.forEach((fn) => fn());
+      }
+      return;
     }
+
+    solved = false;
   }
 
   layout.forEach((row, rowIdx) => {

@@ -48,4 +48,33 @@ Clone the repository:
 ```bash
 git clone git@github.com:Bohlale-Mabonga/CGV-Game.git
 cd CGV-Game
+```
+
+## Testing
+
+This project uses Vitest to validate the main gameplay systems.
+
+Run the test suite:
+
+```bash
+npm test
+```
+
+Generate a coverage report for local review:
+
+```bash
+npm run test:coverage
+```
+
+The coverage output is stored in the `coverage/` folder and can be uploaded to Codecov or a similar service later.
+
+## Important gameplay checks covered
+
+- objective progression and keycard collection
+- level timer countdown and reset logic
+- power-puzzle route validation
+- security beam hazard detection
+- steam vent checkpoint resets
+- collapsing corridor checks and checkpoint recovery
+- door interaction and unlock flow
 
