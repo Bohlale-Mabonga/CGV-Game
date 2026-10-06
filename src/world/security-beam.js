@@ -7,7 +7,6 @@ const DEFAULT_HEIGHT = 0.3; // must match the player's eye/collision height
 const DEFAULT_BEAM_RADIUS = 0.005;
 
 const ACTIVE_COLOR = 0xff3344;
-const DISABLED_COLOR = 0x44ff66;
 
 export function createSecurityBeam(
   position,
@@ -72,9 +71,13 @@ export function createSecurityBeam(
   group.userData.setEnabled = (enabled) => {
     group.userData.enabled = enabled;
 
-    emitter.material.emissive.set(enabled ? ACTIVE_COLOR : DISABLED_COLOR);
-    beam.material.color.set(enabled ? ACTIVE_COLOR : DISABLED_COLOR);
-    light.color.set(enabled ? ACTIVE_COLOR : DISABLED_COLOR);
+    if (!enabled) {
+      group.removeFromParent();
+    } else {
+      emitter.material.emissive.set(ACTIVE_COLOR);
+      beam.material.color.set(ACTIVE_COLOR);
+      light.color.set(ACTIVE_COLOR);
+    }
   };
 
   group.userData.update = (delta) => {

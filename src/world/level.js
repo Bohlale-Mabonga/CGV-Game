@@ -70,11 +70,18 @@ export async function buildLevel({ scene, interactionSystem }) {
     emissive: 0xff3344,
     emissiveIntensity: 0.8,
   });
+
   const emitter = new THREE.Mesh(
     new THREE.SphereGeometry(0.07, 12, 12),
     emitterMaterial,
   );
   emitter.position.set(GRID_ORIGIN.x + 2.5, 0.38, GRID_ORIGIN.z - 0.9);
+
+  // Add point light to the emitter to make it glow.
+  const emitterLight = new THREE.PointLight(0x1c0f0f, 1.5, 1);
+  emitterLight.position.set(GRID_ORIGIN.x + 2.5, 0.38, GRID_ORIGIN.z - 0.9);
+  scene.add(emitterLight);
+
   const reactorConsole = createReactorConsole(new THREE.Vector3(0, 0.9, -24));
   scene.add(auxPower, containmentInput, emitter, reactorConsole);
 
@@ -83,14 +90,19 @@ export async function buildLevel({ scene, interactionSystem }) {
     doors,
     puzzle,
     reactorConsole,
-    collisionObjects: doors.all.map((d) => d.object),
+    collisionObjects: [
+      ...doors.all.map((d) => d.object),
+      auxPower,
+      containmentInput,
+    ],
     isInside: (x, z) => rooms.some((r) => r.contains(x, z)),
     update(delta) {
       for (const d of doors.all) d.mixer.update(delta);
 
       if (puzzle.isSolved()) {
-        emitterMaterial.emissive.setHex(0x33ff33);
+        emitterMaterial.emissive.setHex(0x37c8ff);
         emitterMaterial.emissiveIntensity = 1;
+        emitterLight.color.setHex(0x37c8ff);
       } else {
         emitterMaterial.emissive.setHex(0xff3344);
         const t = performance.now() * 0.01;

@@ -83,7 +83,8 @@ export class Body {
       for (const height of this._heights) {
         this._center.set(x, height, z);
         this._box.clampPoint(this._center, this._closest);
-        if (this._closest.distanceToSquared(this._center) < this._radiusSq) return true;
+        if (this._closest.distanceToSquared(this._center) < this._radiusSq)
+          return true;
       }
     }
     return false;
@@ -100,9 +101,11 @@ export class Body {
         this._center.set(position.x, height, position.z);
         this._box.clampPoint(this._center, this._closest);
 
-        if (this._closest.distanceToSquared(this._center) >= this._radiusSq) continue;
+        if (this._closest.distanceToSquared(this._center) >= this._radiusSq)
+          continue;
 
-        if (this._closest.equals(this._center)) this._escapeThroughNearestFace(position);
+        if (this._closest.equals(this._center))
+          this._escapeThroughNearestFace(position);
         else this._pushOutAlongNormal(position);
 
         moved = true;
