@@ -4,17 +4,28 @@ title: "Level 1 — Corridors (Explore)"
 
 # Level 1 — Corridors (Explore)
 
+**What only this level has:** darkness and flashlight management, a door code hidden in UV ink that only the flashlight reveals, a keypad puzzle, and the scanner.
+
 ## Objective
 
-Collect 3 keycards hidden along a dark corridor, then reach and open the exit door.
+Find the three reactor keycards (red, blue, gold), insert them at the card reader beside the Reactor Access door, then take the service lift down.
+
+## Layout
+
+| Area | What happens there |
+|---|---|
+| Maintenance Dock | Start point: SPARK's charging pod and a window onto space (the static skybox) |
+| Main corridor | Two pairs of floor steam vents, and a chest-height steam leak you must **crouch** under |
+| Crew Quarters | The **red keycard** on a desk, plus Mira's log hinting that she painted the coolant door code in UV ink above her bunk |
+| Storage Bay (8 m tall) | **Blue keycard** at the top. Climb crates, jump a collapsed section of catwalk, and time a steam vent |
+| Reactor Access Hall | Card reader, the keypad-locked coolant door, and a rotating amber beacon |
+| Coolant Pumps | **Gold keycard** at the far end. Four wall-to-wall curtains of steam fire in a wave you have to follow |
 
 ## Mechanics
 
-- **Flashlight** — a SpotLight parented to the camera, toggled on/off with `F`. Lights only where the player is looking.
-- **Keycards** — glowing, slowly rotating and bobbing objects. Collected automatically by walking within range (no button press). Each collection updates the HUD keycard count.
-- **Steam vents** — cycle between active and inactive on a timer (1.5s active / 1.8s inactive). Standing near an active vent returns the player to a checkpoint.
-- **Door** — stays closed and locked (brown material) until all 3 keycards are collected, at which point it visually unlocks (turns green) and can be opened with `E`, sliding upward.
-
-## Movement Bounds
-
-The player's position is clamped within corridor bounds (`PlayerControls.setBounds`) to prevent walking through walls or off the level's playable area — a lightweight substitute for full collision detection.
+- **Flashlight:** a SpotLight that casts shadows, mounted at the robot's head and pointing where you look. Its battery drains while on (0.9 %/s) and recharges while off; it flickers when low. Batteries are also scattered around.
+- **UV ink:** the coolant door code is random each run. A custom shader draws it only where the flashlight cone actually falls (see [Shaders](/technical/shaders/)).
+- **Keypad:** a mouse-driven popup. A wrong code shakes and buzzes.
+- **Steam vents:** cycle idle → 1 s warning hiss and orange glow → scalding burst. Some vents are timed so bursts roll along in a wave.
+- **Scanner (Q):** a pulse that reveals keycards, logs and pickups through walls.
+- **Data logs:** 4 terminals that tell the story and hint at puzzles.

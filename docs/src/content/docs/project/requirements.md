@@ -4,25 +4,36 @@ title: Requirements
 
 # Requirements
 
-Per the course brief, the final deliverable must include:
+Status of each deliverable from the course brief.
 
-- A playable 3D game with three genuinely distinct levels, hosted on the department LAMP server
-- A trailer video (max 2 minutes)
-- A devlog video (final submission only)
-- A credits screen listing all third-party resources used
-- An individual contribution report
+| Deliverable | Status |
+|---|---|
+| Playable 3D game, three genuinely distinct levels | Done |
+| Hosted on the department LAMP server | Done: https://wmc.ms.wits.ac.za/students/sgroup3906/ |
+| Keyboard and mouse controls | Done |
+| At least one custom shader | Done (13 shader materials plus a post-processing pass) |
+| Restart without refreshing the page | Done (pause menu, results screens) |
+| In-game credits screen | Done (Main menu → Credits) |
+| Trailer video (max 2 min) | Done: 1:50, uploaded to YouTube |
+| Devlog video | Final submission only |
+| Individual contribution reports | Each member, on Moodle |
 
-## Implemented So Far
+## Section 12 checklist
 
-- Three levels, each with a distinct objective type: exploration (Level 1), puzzle-solving under time pressure (Level 2), and escape/survival (Level 3)
-- Keyboard (WASD) and mouse look controls
-- Interaction system (`E` key) for keycards, doors, and power junctions
-- A HUD showing objectives, keycard count, timer, and status messages
-- A custom shader on the reactor core
-
-## Not Yet Started
-
-- Trailer and devlog videos
-- Credits screen
-- LAMP server deployment (currently tested via local build + serve only)
-- Formal testing documentation
+- [x] Three levels, playable from start to finish
+- [x] Each level adds something the others don't (see [Overview](/project/overview/))
+- [x] Keyboard and mouse controls both work
+- [x] Custom shaders in the game. Every member should be able to explain them; see [Shaders](/technical/shaders/)
+- [x] Restart without refreshing
+- [x] Credits screen with sources and licences
+- [x] Production build, not the source tree
+- [x] Build tested locally over HTTP
+- [x] No absolute paths (`vite.config.js` uses `base: './'`)
+- [x] Asset filenames lowercase with no spaces
+- [x] Archive uploaded with `index.html` at its top level
+- [ ] Full playthrough on the published URL with the console checked (files already confirmed to load)
+- [x] Memory doesn't climb across levels (see [Performance](/technical/performance/))
+- [ ] Frame rate confirmed on a lab machine
+- [x] Trailer on YouTube
+- [ ] Devlog video
+- [ ] Contribution reports

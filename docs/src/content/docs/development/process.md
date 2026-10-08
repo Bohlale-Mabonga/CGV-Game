@@ -14,5 +14,15 @@ title: Development Process
 6. Level 2 built: control room, power-junction puzzle with a correct sequence, security beam hazard, countdown timer.
 7. Level 3 built: collapsing corridor sequence, custom-shader reactor core, meltdown timer, win/lose conditions.
 
+8. **Full rebuild (`Cooked` branch).** The game was restructured into an engine/game/ui architecture:
+   - **Systems:** physics, adaptive procedural audio, procedural textures, a post-processing pipeline, 13 custom shaders.
+   - **Player:** first- and third-person cameras, a minimap, the hierarchical SPARK robot.
+   - **Levels:** all three rebuilt with new mechanics (UV-ink puzzle, sentry stealth, mixed-unit junction puzzle, routing grid, fire chase, double-jump, the core finale).
+   - **UI:** menus, options, pause/restart, hints, ranks.
+9. **Testing pass.** Automated browser tests in Chrome covered all three levels, controls, the level flows and memory. Visual and performance bugs were fixed (see [Bug Tracker](/testing/bug-tracker/)).
+10. **Blender robot.** SPARK is modelled by a Blender Python script and loaded as `.glb`.
+11. **Trailer** rendered from in-engine footage and uploaded to YouTube (see [Trailer](/media/trailer/)).
+12. **Deployed** to the department LAMP server: https://wmc.ms.wits.ac.za/students/sgroup3906/
+
 ## Known Issues Fixed Along the Way
 - Corridor and objects rendered as a blank black scene due to light intensity values being too low for this Three.js version's physically-based lighting fixed by significantly increasing spotlight/ambient intensity values.

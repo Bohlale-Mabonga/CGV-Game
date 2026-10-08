@@ -4,15 +4,29 @@ title: "Level 2 — Control Room (Solve)"
 
 # Level 2 — Control Room (Solve)
 
+**What only this level has:** a countdown, a stealth/timing hazard based on line of sight, jump pads, a logic puzzle with mixed units, and the routing grid.
+
 ## Objective
 
-Activate three power junctions in the correct order before a 60-second timer runs out, without being caught by a sweeping security beam.
+Bring five power junctions online from the **lowest load to the highest**. Then route the power at the master console, and enter the reactor lift once its force field drops. All of this happens before the 4-minute countdown ends (on Normal).
+
+## The room
+
+- A circular, two-tier room under a glass dome. Through the dome you see an animated nebula skybox, drawn by a custom shader.
+- The upper ring catwalk is reached by staircases or by the two green jump pads.
+- On High quality, the centre of the floor is a real-time mirror.
 
 ## Mechanics
 
-- **Power junctions** — three interactable panels, each with a colour-coded clue light. Pressing `E` on the correct junction (in the sequence 1 → 3 → 2) activates it, pressing the wrong one resets the whole sequence and flashes the panel red.
-- **Reactor console** — turns from red to green once all three junctions are activated in order, marking the puzzle complete and stopping the timer.
-- **Security beam** — a red beam that sweeps side to side across the room. Touching it returns the player to the control room checkpoint.
-- **Timer** — if the 60-second countdown reaches zero before the puzzle is solved, the puzzle resets and the player is returned to the checkpoint.
-
-This level is deliberately a different kind of challenge from Level 1: timing and sequence-memory under pressure, rather than open exploration.
+- **Junctions:** 3 on the floor and 2 on the catwalk. Hold E for 1 s to activate one.
+  - Each shows a random load. Two of them display it in **kW or GW** instead of MW, so you have to convert units to find the right order.
+  - Activating one sends energy flowing along its floor cable to the console.
+  - **Wrong order:** a breaker surge (12 damage), all junctions reset, and 10 s off the clock.
+- **Security sentry:** a turret in the centre sweeps a wedge-shaped scanner beam across the floor.
+  - Standing in the beam *with clear line of sight* fills a detection meter. When it's full, the sentry zaps you (25 damage, −5 s).
+  - Grey pillars block its view.
+  - It speeds up with every junction you bring online.
+- **Arcing conduits:** periodic lightning across two points on the catwalk.
+- **Routing grid:** a 5×5 pipe-rotation puzzle at the master console. Click tiles to rotate them and connect the source to the core feed; connected pipes light up. The grid is random each run, and the clock keeps running while you solve it. A shield wall keeps the sentry off you here.
+- **Force field:** the lift barrier ripples where you touch it and dissolves once the power is routed.
+- **Data logs:** 2 terminals, including the engineer's note about mixed units.
