@@ -517,6 +517,108 @@ export class UI {
     };
   }
 
+  // Load diagnostic: a signal-memory minigame. Pads flash a sequence; the player
+  // repeats it (mouse or keys 1–4). Three rounds of length 3, 4 and 5; a
+  // mistake replays the round. onWin() returns the result lines to display.
+  showSignalGame(onWin, onClose) {
+    const PADS = [
+      { color: '#37c8ff', pitch: 0.62 }, { color: '#ffb020', pitch: 0.78 },
+      { color: '#37ff8b', pitch: 0.94 }, { color: '#ff4fd8', pitch: 1.12 }
+    ];
+    const LENGTHS = [3, 4, 5];
+    this.el.modal.innerHTML = `
+      <div class="modal-card signal">
+        <div class="kp-title">LOAD DIAGNOSTIC · SIGNAL TEST</div>
+        <div class="sg-help">Watch the pads, then repeat the signal. Pass all three rounds to unscramble the junction readings.</div>
+        <div class="sg-rounds">${LENGTHS.map(() => '<span class="sg-dot"></span>').join('')}</div>
+        <div class="sg-status" id="sg-status">GET READY…</div>
+        <div class="sg-grid">${PADS.map((p, i) => `<button class="sg-pad" data-p="${i}" style="--c:${p.color}">${i + 1}</button>`).join('')}</div>
+        <div class="sg-result hidden" id="sg-result"></div>
+        <button class="btn" id="sg-close">Leave terminal [Esc]</button>
+      </div>`;
+    this.el.modal.classList.remove('hidden');
+    const card = this.el.modal.querySelector('.signal');
+    const status = $('#sg-status');
+    const pads = [...card.querySelectorAll('.sg-pad')];
+    const dots = [...card.querySelectorAll('.sg-dot')];
+    const timers = [];
+    let round = 0, seq = [], input = [], accepting = false, done = false;
+    const later = (ms, fn) => timers.push(setTimeout(() => { if (card.isConnected) fn(); }, ms));
+    const flash = (p, ms) => {
+      pads[p].classList.add('lit');
+      audio.play('beep', { pitch: PADS[p].pitch });
+      later(ms, () => pads[p].classList.remove('lit'));
+    };
+    const play = () => {
+      accepting = false;
+      input = [];
+      status.textContent = 'WATCH THE SIGNAL';
+      status.className = 'sg-status';
+      seq.forEach((p, i) => later(700 + i * 650, () => flash(p, 420)));
+      later(700 + seq.length * 650, () => {
+        accepting = true;
+        status.textContent = `REPEAT IT · ${seq.length} PULSES`;
+      });
+    };
+    const newRound = () => {
+      seq = Array.from({ length: LENGTHS[round] }, () => (Math.random() * 4) | 0);
+      play();
+    };
+    const close = () => {
+      timers.forEach(clearTimeout);
+      this.closeModal();
+      onClose?.(done);
+    };
+    const press = (p) => {
+      if (!accepting || done) return;
+      flash(p, 180);
+      input.push(p);
+      const i = input.length - 1;
+      if (input[i] !== seq[i]) {
+        accepting = false;
+        audio.play('error');
+        status.textContent = 'SIGNAL LOST · REPLAYING';
+        status.className = 'sg-status bad';
+        card.classList.remove('shake');
+        void card.offsetWidth;
+        card.classList.add('shake');
+        later(1100, play);
+        return;
+      }
+      if (input.length < seq.length) return;
+      accepting = false;
+      dots[round].classList.add('on');
+      round++;
+      if (round < LENGTHS.length) {
+        status.textContent = 'ROUND CLEAR';
+        status.className = 'sg-status good';
+        audio.play('success', { volume: 0.6 });
+        later(900, newRound);
+        return;
+      }
+      done = true;
+      audio.play('success');
+      status.textContent = 'DIAGNOSTIC COMPLETE';
+      status.className = 'sg-status good';
+      card.classList.add('solved');
+      const lines = onWin() ?? [];
+      const result = $('#sg-result');
+      result.innerHTML = `<div class="sg-result-title">JUNCTION ORDER · LOWEST LOAD FIRST</div>${lines.map((l) => `<div>${l}</div>`).join('')}`;
+      result.classList.remove('hidden');
+      $('#sg-close').textContent = 'Continue [Enter]';
+    };
+    pads.forEach((b, i) => b.addEventListener('click', () => press(i)));
+    $('#sg-close').addEventListener('click', close);
+    this.modalKey = (e) => {
+      const m = /^(Digit|Numpad)([1-4])$/.exec(e.code);
+      if (m) press(Number(m[2]) - 1);
+      else if (e.code === 'Escape' || (done && (e.code === 'Enter' || e.code === 'KeyE'))) close();
+      else return false;
+      return true;
+    };
+    later(500, newRound);
+  }
+
   // Power-routing grid: rotate pipe tiles to connect source → output.
   showRoutingGrid(onSolved, onClose) {
     const N = 5;
