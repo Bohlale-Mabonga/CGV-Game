@@ -44,7 +44,7 @@ const LOGS = {
   hall: {
     id: 'LOG 02-R',
     title: 'Chief Engineer Vasquez',
-    body: 'Core temperature passing 2,800 K. Containment field at 61%.\n\nThe reactor access lift needs all three keycards — red, blue and gold. Once you are down there, the control room has to re-route power through the junctions in order of load, lowest first, or the breakers will trip.\n\nGood luck to whoever finds this.'
+    body: 'Core temperature passing 2,527 °C. Containment field at 61%.\n\nThe reactor access lift needs all three keycards — red, blue and gold. Once you are down there, the control room has to re-route power through the junctions in order of load, lowest first, or the breakers will trip.\n\nGood luck to whoever finds this.'
   }
 };
 
@@ -531,18 +531,33 @@ export class Level1 extends Level {
       band.position.set(-26.8, 1.7, z);
       this.add(band);
     }
-    // Vent gauntlet: four wall-to-wall curtains of floor vents. Each curtain
-    // fires 0.85 s after the previous one, so a wave rolls away from the door
-    // and the player has to follow just behind it.
-    const cols = [-16.6, -19.2, -21.8, -24.4];
-    cols.forEach((x, ci) => {
-      for (let z = -44.9, k = 0; z <= -31; z += 2.2, k++) {
+    // Vent gauntlet: three wall-to-wall curtains of floor vents. Each curtain
+    // has one permanent gap (lit green) and the gaps alternate sides, so the
+    // safe route zigzags: through a gap, along the safe strip between curtains,
+    // then through the next gap. The curtains still fire in a rolling wave,
+    // which lets confident players time a straight dash instead.
+    const curtains = [{ x: -17.2, gap: -33.4 }, { x: -20.6, gap: -42.6 }, { x: -24.0, gap: -33.4 }];
+    const greenLane = emissive(0x37ff8b, 2.5);
+    curtains.forEach(({ x, gap }, ci) => {
+      let first = true;
+      for (let z = -45.4; z <= -30.5; z += 1.6) {
+        if (Math.abs(z - gap) < 1.75) continue;
         this.vents.push(new SteamVent(this, {
           position: new THREE.Vector3(x, 0.02, z), period: 3.4, burst: 1.1, offset: -ci * 0.85,
-          radius: 1.15, length: 3.4, silent: k !== 3
+          radius: 0.85, length: 3.4, growth: 0.05, silent: !first
         }));
+        first = false;
       }
-      this.box(0.25, 0.02, 16, x + 1.45, 0.01, -38, this.mat.hazard, { collide: false, tile: 1 });
+      // Hazard stripes along both edges of the curtain, broken at the gap.
+      for (const edge of [-1.25, 1.25]) {
+        const north = gap - 1.25 - -46;
+        const south = -30 - (gap + 1.25);
+        this.box(0.2, 0.02, north, x + edge, 0.01, -46 + north / 2, this.mat.hazard, { collide: false, tile: 1 });
+        this.box(0.2, 0.02, south, x + edge, 0.01, -30 - south / 2, this.mat.hazard, { collide: false, tile: 1 });
+      }
+      // Green lane lights marking the gap.
+      for (const dz of [-1.1, 1.1]) this.box(2.5, 0.03, 0.12, x, 0.02, gap + dz, greenLane, { collide: false, tile: 1 });
+      this.addMarker(new THREE.Vector3(x, 0, gap), '#37ff8b', 'dot');
     });
     // Raised pedestal with the GOLD keycard.
     this.box(2.4, 0.5, 2.4, -26.6, 0.25, -38, this.mat.dark, { tile: 1 });
@@ -634,7 +649,7 @@ export class Level1 extends Level {
           this.coolantUnlocked = true;
           this.coolantDoor.open();
           this.keypadScreen.userData.redraw('OPEN', { color: '#37ff8b', border: '#37ff8b' });
-          this.game.say('Coolant pump door unlocked. Watch the vents in there — they fire in waves.');
+          this.game.say('Coolant pump door unlocked. The vents in there fire in waves, but every row has a gap. Look for the green lights.');
           this.checkpoint.position.set(-10, 0, -38);
           this.checkpoint.yaw = Math.PI / 2;
           return true;
@@ -714,7 +729,7 @@ export class Level1 extends Level {
     if (!have('RED')) list.push(['The Crew Quarters are through the door on the west side of the main corridor.', 'The red keycard is on a desk in the middle of the Crew Quarters. Use your flashlight (F).']);
     if (!this.coolantUnlocked) list.push(['The coolant door code is hidden somewhere in the Crew Quarters.', 'Mira painted it in UV ink above the bunks on the north wall — shine your flashlight on it.', `The code is ${this.code.join(' ')}.`]);
     if (!have('BLUE')) list.push(['The blue keycard is high up in the Storage Bay (east side of the corridor).', 'Jump (Space) up the stack of crates to reach the catwalk on the south wall.', 'Jump the collapsed gap, wait out the steam vent, then hop onto the tall blue crate at the east end.']);
-    if (this.coolantUnlocked && !have('GOLD')) list.push(['The gold keycard is at the far end of the Coolant Pumps room.', 'The vent curtains fire in a wave rolling away from the door. Wait for the first curtain to fire, then follow just behind the wave.']);
+    if (this.coolantUnlocked && !have('GOLD')) list.push(['The gold keycard is at the far end of the Coolant Pumps room.', 'Each row of vents has a gap marked by green floor lights. Go through the gap, wait in the safe strip between rows, then head for the next gap.']);
     if (this.collectedCount() === 3 && !this.exitOpen) list.push(['Use the card reader to the right of the Reactor Access door at the north end of the hall.']);
     if (this.exitOpen) list.push(['The service lift is through the open Reactor Access door — step into the green ring.']);
     return list[0] ?? ['Explore with the flashlight (F) and ping the scanner (Q) to reveal nearby items.'];
