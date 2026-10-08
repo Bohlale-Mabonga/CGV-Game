@@ -365,6 +365,7 @@ function buildShotList() {
     setup(c) {
       c.j = [...c.level.junctions].filter((j) => j.group.position.y < 1).sort((a, b) => a.load - b.load)[0];
       c.level.progress = c.j.rank;
+      c.level.diagnosed = true;
       c.front = new THREE.Vector3(0, 0, -1).applyQuaternion(c.j.group.quaternion);
       c.side = new THREE.Vector3(-c.front.z, 0, c.front.x);
     },
