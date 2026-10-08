@@ -686,6 +686,11 @@ export class Game {
     this.ui.showKeypad(onSubmit, () => this.exitModal());
   }
 
+  openSignalGame({ onWin }) {
+    this.enterModal();
+    this.ui.showSignalGame(onWin, () => this.exitModal());
+  }
+
   openRoutingGrid({ onSolved }) {
     this.enterModal();
     this.ui.showRoutingGrid(onSolved, () => this.exitModal());
