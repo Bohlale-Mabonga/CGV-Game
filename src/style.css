@@ -284,3 +284,24 @@ kbd {
   .objective { max-width: 60vw; }
   .btn { min-width: 200px; }
 }
+
+/* Load diagnostic signal minigame */
+.signal { width: min(420px, 94vw); text-align: center; }
+.signal.shake { animation: shake 0.4s; }
+.signal.solved { border-top-color: var(--green); }
+.sg-help { color: var(--muted); font-size: 15px; margin-bottom: 12px; }
+.sg-rounds { display: flex; justify-content: center; gap: 10px; margin-bottom: 10px; }
+.sg-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--cyan); opacity: 0.5; }
+.sg-dot.on { background: var(--green); border-color: var(--green); opacity: 1; box-shadow: 0 0 10px var(--green); }
+.sg-status { font-family: var(--head); letter-spacing: 0.25em; font-size: 13px; color: var(--cyan); margin-bottom: 14px; min-height: 18px; }
+.sg-status.bad { color: var(--red); }
+.sg-status.good { color: var(--green); }
+.sg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0 auto 16px; width: 280px; }
+.sg-pad { aspect-ratio: 1; border-radius: 10px; border: 2px solid var(--c); background: color-mix(in srgb, var(--c) 14%, #02070d); color: var(--c); font-family: var(--head); font-size: 26px; cursor: pointer; transition: background 0.08s, box-shadow 0.08s, transform 0.05s; }
+.sg-pad:hover { background: color-mix(in srgb, var(--c) 26%, #02070d); }
+.sg-pad:active { transform: scale(0.96); }
+.sg-pad.lit { background: var(--c); color: #02070d; box-shadow: 0 0 34px var(--c), inset 0 0 18px #fff8; }
+.sg-result { text-align: left; background: #02070d; border: 1px solid rgba(55, 255, 139, 0.4); padding: 12px 16px; margin-bottom: 16px; font-size: 17px; line-height: 1.5; }
+.sg-result-title { font-family: var(--head); font-size: 11px; letter-spacing: 0.25em; color: var(--green); margin-bottom: 6px; }
+.signal .btn { min-width: 0; }
+.signal.solved .sg-grid, .signal.solved .sg-help { display: none; }
