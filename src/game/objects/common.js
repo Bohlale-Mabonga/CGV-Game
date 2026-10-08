@@ -406,7 +406,7 @@ export class Pickup {
         this.level.game.ui.toast('Flashlight battery recharged');
       } else {
         player.heal(50);
-        this.level.game.ui.toast('Chassis repaired +50');
+        this.level.game.ui.toast('Health restored +50');
       }
     }
   }
