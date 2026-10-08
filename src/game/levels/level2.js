@@ -2,14 +2,15 @@
 //
 // A circular two-tier control room under a glass dome. A countdown is running.
 // Five power junctions (three on the floor, two on the upper ring catwalk)
-// must be brought online in order of load, lowest first — but the panels are
-// not standardised (kW / MW / GW), so the player has to compare units. A
+// must be brought online in order of load, lowest first — but the surge has
+// scrambled their displays. Winning the signal-memory minigame at the Load
+// Diagnostic terminal reveals every load (in MW) and the order to follow. A
 // security turret sweeps the floor with a scanner beam; cover pillars block
 // its line of sight. Once all five are live, the master console's routing
 // grid (a pipe-rotation puzzle) must be solved to drop the force field to the
 // reactor lift.
 // What only this level has: a countdown, a stealth/timing hazard with
-// line-of-sight, jump pads, a logic puzzle with mixed units, the routing grid.
+// line-of-sight, jump pads, the signal-memory diagnostic, the routing grid.
 
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
@@ -43,13 +44,11 @@ const LOGS = {
   power: {
     id: 'LOG 23-P',
     title: 'Power engineer — shift notes',
-    body: 'Reminder for the new hires: the junction displays are NOT standardised. Three different contractors, three different units.\n\n1 GW = 1,000 MW.   1 MW = 1,000 kW.\n\nAlways restore from the lowest load to the highest, or the breakers trip and the whole sequence resets.'
+    body: 'The surge scrambled every junction display. The only way to read the loads now is the Load Diagnostic terminal by the south lift. It makes you pass a signal test before it gives up the readings.\n\nAlways restore from the lowest load to the highest, or the breakers trip and the whole sequence resets.'
   }
 };
 
-function formatLoad(mw, unit) {
-  if (unit === 'kW') return `${(mw * 1000).toLocaleString('en-US')} kW`;
-  if (unit === 'GW') return `${(mw / 1000).toFixed(2)} GW`;
+function formatLoad(mw) {
   return `${mw} MW`;
 }
 
@@ -65,7 +64,8 @@ export class Level2 extends Level {
   build() {
     const game = this.game;
     this.batteryDrain = 0.3;
-    this.timeLimit = 240 * settings.difficulty.timeScale;
+    this.timeLimit = 270 * settings.difficulty.timeScale;
+    this.diagnosed = false;
     this.timeLeft = this.timeLimit;
     this.progress = 0; // junctions online in the correct order
     this.gridSolved = false;
@@ -89,6 +89,7 @@ export class Level2 extends Level {
     this.buildTurret();
     this.buildJunctions();
     this.buildConsole();
+    this.buildDiagnostics();
     this.buildCatwalkHazards();
     this.buildExit();
     this.finalizeStatic();
@@ -358,10 +359,9 @@ export class Level2 extends Level {
 
   // ------------------------------------------------------------- junctions --
   buildJunctions() {
-    // Random distinct loads; the solution is ascending MW. Two panels use other units.
+    // Random distinct loads (MW); the solution is ascending load.
     const pool = [40, 75, 120, 160, 210, 260, 320, 380, 450, 520, 610, 700];
     const loads = pool.sort(() => Math.random() - 0.5).slice(0, 5);
-    const units = ['MW', 'MW', 'MW', 'kW', 'GW'].sort(() => Math.random() - 0.5);
     const spots = [
       { pos: new THREE.Vector3(-9.0, 0, 2.6), upper: false },
       { pos: new THREE.Vector3(9.0, 0, 2.6), upper: false },
@@ -369,13 +369,13 @@ export class Level2 extends Level {
       { pos: new THREE.Vector3(Math.cos(Math.PI * 1.06) * 15.3, CATWALK_Y, Math.sin(Math.PI * 1.06) * 15.3), upper: true },
       { pos: new THREE.Vector3(Math.cos(-Math.PI * 0.17) * 15.3, CATWALK_Y, Math.sin(-Math.PI * 0.17) * 15.3), upper: true }
     ];
-    this.junctions = spots.map((s, i) => this.createJunction(i + 1, s, loads[i], units[i]));
+    this.junctions = spots.map((s, i) => this.createJunction(i + 1, s, loads[i]));
     const order = [...this.junctions].sort((a, b) => a.load - b.load);
     order.forEach((j, rank) => { j.rank = rank; });
     this.solutionOrder = order.map((j) => `J${j.id}`);
   }
 
-  createJunction(id, { pos, upper }, load, unit) {
+  createJunction(id, { pos, upper }, load) {
     // Hierarchy: Junction → Housing, Screen, StatusLight, LeverPivot → Handle
     const g = new THREE.Group();
     g.name = `Junction${id}`;
@@ -386,8 +386,9 @@ export class Level2 extends Level {
     housing.position.y = 0.95;
     housing.castShadow = housing.receiveShadow = true;
     g.add(housing);
-    const screenTex = makeLabelTexture([`JUNCTION ${id}`, formatLoad(load, unit)], {
-      width: 384, height: 192, color: '#ffd36b', border: '#ffb020', font: '700 44px Orbitron, sans-serif'
+    // Scrambled until the load diagnostic has been run.
+    const screenTex = makeLabelTexture([`JUNCTION ${id}`, 'NO READING'], {
+      width: 384, height: 192, color: '#ff6a5a', border: '#ff4455', font: '700 44px Orbitron, sans-serif'
     });
     const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.95, 0.48), new THREE.MeshBasicMaterial({ map: screenTex, toneMapped: false }));
     screen.position.set(0, 1.45, -0.305);
@@ -435,24 +436,37 @@ export class Level2 extends Level {
     this.add(cable);
 
     const junction = {
-      id, load, unit, group: g, statusMat, leverPivot, cableMat, screenTex,
+      id, load, upper, group: g, statusMat, leverPivot, cableMat, screenTex,
       online: false, flow: 0, error: 0, position: pos.clone().addScaledVector(front, 0.9).setY(pos.y + 1.0)
     };
-    this.addInteractable({
+    // No hold is needed until the diagnostic is done (pressing E just explains why it is locked).
+    junction.interactable = this.addInteractable({
       position: junction.position,
       radius: 2.0,
-      hold: 1.0,
-      prompt: () => `Hold E — bring Junction ${id} online (${formatLoad(load, unit)})`,
+      hold: 0,
+      prompt: () => (this.diagnosed
+        ? `Hold E — bring Junction ${id} online (${formatLoad(load)})`
+        : `Junction ${id} — reading scrambled. Run the load diagnostic first`),
       enabled: () => !junction.online,
       onInteract: () => this.activateJunction(junction)
     });
     this.addMarker(junction.position, '#ffb020', 'square', { visible: () => !junction.online, label: `J${id}` });
-    this.addScanTarget(junction.position, `J${id} · ${formatLoad(load, unit)}`, '#ffb020', () => !junction.online);
+    junction.scan = { position: junction.position, label: `J${id} · NO READING`, color: '#ffb020', active: () => !junction.online };
+    this.scanTargets.push(junction.scan);
     return junction;
+  }
+
+  junctionScreen(j) {
+    j.screenTex.userData.redraw([`JUNCTION ${j.id}`, `${formatLoad(j.load)} · #${j.rank + 1}`], { color: '#ffd36b', border: '#ffb020' });
   }
 
   activateJunction(j) {
     const game = this.game;
+    if (!this.diagnosed) {
+      audio.play('locked', { position: j.group.position });
+      game.ui.toast('Reading scrambled: run the Load Diagnostic at the south terminal', '#ff8a3a');
+      return;
+    }
     game.player.rig.triggerReach();
     if (j.rank === this.progress) {
       j.online = true;
@@ -482,12 +496,77 @@ export class Level2 extends Level {
         if (k.online) {
           k.online = false;
           k.statusMat.emissive.set(0xff3344);
-          k.screenTex.userData.redraw([`JUNCTION ${k.id}`, formatLoad(k.load, k.unit)], { color: '#ffd36b', border: '#ffb020' });
+          this.junctionScreen(k);
         }
         k.error = 1;
       }
       this.progress = 0;
     }
+  }
+
+  // ------------------------------------------------------- load diagnostic --
+  // A terminal near the arrival lift (outside the sentry's reach). Winning its
+  // signal-memory minigame reveals every junction's load and the order.
+  buildDiagnostics() {
+    const pos = new THREE.Vector3(3.6, 0, 13.4);
+    const g = new THREE.Group();
+    g.name = 'LoadDiagnostic';
+    g.position.copy(pos);
+    g.rotation.y = Math.atan2(pos.x, pos.z); // face the room centre
+    const desk = new THREE.Mesh(new RoundedBoxGeometry(1.7, 1.0, 0.8, 3, 0.06), this.mat.dark);
+    desk.position.y = 0.5;
+    desk.castShadow = desk.receiveShadow = true;
+    const back = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.0, 0.1), this.mat.dark);
+    back.position.set(0, 1.55, 0.3);
+    this.diagScreen = makeLabelTexture(['LOAD DIAGNOSTIC', 'READINGS SCRAMBLED', '▶ RUN SIGNAL TEST'], {
+      width: 512, height: 288, color: '#37c8ff', border: '#37c8ff', font: '700 36px Orbitron, sans-serif'
+    });
+    const screen = new THREE.Mesh(new THREE.PlaneGeometry(1.45, 0.82), new THREE.MeshBasicMaterial({ map: this.diagScreen, toneMapped: false }));
+    screen.position.set(0, 1.55, 0.24);
+    screen.rotation.y = Math.PI;
+    g.add(desk, back, screen);
+    // Four coloured pads on the desk hint at the minigame.
+    [0x37c8ff, 0xffb020, 0x37ff8b, 0xff4fd8].forEach((c, i) => {
+      const pad = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.04, 0.22), emissive(c, 1.8));
+      pad.position.set(-0.48 + i * 0.32, 1.02, -0.12);
+      g.add(pad);
+    });
+    this.add(g);
+    this.physics.addCentered(pos.x, 0.6, pos.z, 1.5, 1.2, 1.5);
+    const front = new THREE.Vector3(0, 0, -1).applyQuaternion(g.quaternion);
+    const interactPos = pos.clone().addScaledVector(front, 1.1).setY(1.0);
+    this.addInteractable({
+      position: interactPos,
+      radius: 2.2,
+      prompt: () => (this.diagnosed ? 'Show the junction order again' : 'Run the load diagnostic'),
+      onInteract: () => {
+        if (this.diagnosed) {
+          this.game.ui.toast(`Order: ${this.solutionOrder.join(' → ')}`, '#37c8ff');
+          return;
+        }
+        this.game.openSignalGame({ onWin: () => this.onDiagnosed() });
+      }
+    });
+    this.addMarker(pos, '#37c8ff', 'square', { visible: () => !this.diagnosed, label: 'DX' });
+    this.addScanTarget(interactPos, 'LOAD DIAGNOSTIC', '#37c8ff', () => !this.diagnosed);
+  }
+
+  // Called when the signal test is won: returns the lines shown in the result.
+  onDiagnosed() {
+    this.diagnosed = true;
+    const ordered = [...this.junctions].sort((a, b) => a.load - b.load);
+    for (const j of this.junctions) {
+      this.junctionScreen(j);
+      j.interactable.hold = 1.0;
+      j.scan.label = `J${j.id} · ${formatLoad(j.load)} · #${j.rank + 1}`;
+    }
+    this.diagScreen.userData.redraw(['LOAD ORDER (MW)',
+      ordered.slice(0, 3).map((j) => `J${j.id} ${j.load}`).join('  '),
+      ordered.slice(3).map((j) => `J${j.id} ${j.load}`).join('  ')], { color: '#37ff8b', border: '#37ff8b' });
+    this.game.say(`Diagnostic complete. Bring the junctions online in this order: ${ordered.map((j) => `J${j.id}`).join(', ')}.`);
+    this.checkpoint.position.copy(this.game.player.position);
+    this.checkpoint.yaw = this.game.player.yaw;
+    return ordered.map((j, i) => `${i + 1}. Junction ${j.id} — ${formatLoad(j.load)}${j.upper ? ' (upper ring)' : ''}`);
   }
 
   // --------------------------------------------------------------- console --
@@ -652,7 +731,7 @@ export class Level2 extends Level {
 
   // ------------------------------------------------------------ lifecycle --
   start() {
-    this.game.say('Control room. The sentry is in lockdown mode and the core will breach in four minutes. Bring the power junctions online — lowest load first.');
+    this.game.say('Control room. The surge scrambled the junction readings. Run the load diagnostic at the terminal beside you, then bring the junctions online, lowest load first. Watch out for the sentry.');
     this.game.ui.hintPrompt('New: jump pads launch you to the upper ring · hold E on junctions');
   }
 
@@ -792,12 +871,17 @@ export class Level2 extends Level {
   }
 
   hints() {
+    if (!this.diagnosed) {
+      return [
+        'The junction readings are scrambled. Use the Load Diagnostic terminal near where you arrived (south side, cyan marker on the map).',
+        'Watch which pads light up, then click them in the same order (or press 1–4). Three rounds; a mistake just replays the round.'
+      ];
+    }
     if (this.progress < 5) {
       const next = this.junctions.find((j) => j.rank === this.progress);
       return [
-        'Five junctions: three on the floor, two on the upper ring (stairs east/west, or the green jump pads).',
-        'Bring them online from the lowest load to the highest. Careful — some panels show kW or GW. 1 GW = 1,000 MW; 1 MW = 1,000 kW.',
-        `The correct order is ${this.solutionOrder.join(' → ')}. Next: Junction ${next.id}.`
+        `Follow the order in your objective: ${this.solutionOrder.join(' → ')}. Hold E at each junction.`,
+        `Next is Junction ${next.id}, ${next.upper ? 'on the upper ring (stairs east/west, or the green jump pads)' : 'on the floor'}. Hide behind the grey pillars when the sentry beam sweeps past.`
       ];
     }
     if (!this.gridSolved) {
@@ -810,7 +894,8 @@ export class Level2 extends Level {
   }
 
   objectiveText() {
-    if (this.progress < 5) return `Bring the junctions online, lowest load first (${this.progress}/5)`;
+    if (!this.diagnosed) return 'Run the load diagnostic (south terminal)';
+    if (this.progress < 5) return `Junction order: ${this.solutionOrder.join(' → ')} (${this.progress}/5)`;
     return this.objective;
   }
 }
