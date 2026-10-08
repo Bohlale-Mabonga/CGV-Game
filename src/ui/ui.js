@@ -722,7 +722,7 @@ const TEMPLATE = /* html */ `
   <div id="timer" class="timer hidden"><span class="timer-label">CORE BREACH IN</span><span id="timer-value">0:00</span><div class="timer-track"></div></div>
   <div id="detection" class="detection hidden"><span>SENTRY LOCK</span><div class="det-track"><div id="detection-bar"></div></div></div>
   <div class="vitals">
-    <div class="vital"><span class="v-label">INTEGRITY</span><div class="v-track integrity"><div id="bar-integrity"></div></div><span id="val-integrity" class="v-val">100</span></div>
+    <div class="vital"><span class="v-label">HEALTH</span><div class="v-track integrity"><div id="bar-integrity"></div></div><span id="val-integrity" class="v-val">100</span></div>
     <div class="vital"><span class="v-label">STAMINA</span><div class="v-track stamina"><div id="bar-stamina"></div></div></div>
     <div class="vital" id="vital-battery"><span class="v-label">LIGHT <i id="flash-state">ON</i></span><div class="v-track battery"><div id="bar-battery"></div></div></div>
     <div class="hud-row"><div id="keycards" class="keycards"></div><div id="scan-cd" class="scan-cd ready" title="Scanner (Q)">Q</div><div id="abilities"></div></div>
@@ -733,7 +733,7 @@ const TEMPLATE = /* html */ `
   <div id="subtitle" class="subtitle hidden"><span id="subtitle-speaker">ARIA</span><span id="subtitle-text"></span></div>
   <div id="hint" class="hint hidden"><span id="hint-tier">Hint</span><span id="hint-text"></span></div>
   <div id="toasts" class="toasts"></div>
-  <div id="low-power" class="low-power hidden">⚠ CHASSIS INTEGRITY CRITICAL</div>
+  <div id="low-power" class="low-power hidden">⚠ HEALTH CRITICAL</div>
   <div id="fps" class="fps hidden"></div>
   <div id="scan-layer" class="scan-layer hidden"></div>
 </div>
