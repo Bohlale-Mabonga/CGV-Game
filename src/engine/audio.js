@@ -115,9 +115,15 @@ export class AudioEngine {
     }
     const Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
-    const ctx = new Ctx();
-    this.ctx = ctx;
+    this.setupGraph(new Ctx());
+    this.applyVolumes();
+    this.scheduler = setInterval(() => this.schedule(), 25);
+  }
 
+  // Builds the mixing graph on any AudioContext — including an
+  // OfflineAudioContext, which the trailer uses to render its soundtrack.
+  setupGraph(ctx) {
+    this.ctx = ctx;
     this.master = ctx.createGain();
     const compressor = ctx.createDynamicsCompressor();
     compressor.threshold.value = -16;
@@ -145,9 +151,28 @@ export class AudioEngine {
 
     this.noiseBuffer = this.makeNoise(2);
     this.ready = true;
-    this.applyVolumes();
+  }
 
-    this.scheduler = setInterval(() => this.schedule(), 25);
+  // Offline: schedules a whole music segment [start, end) on the audio clock.
+  scheduleSegment(name, start, end, intensityAt = () => 0, fadeIn = 0.05, fadeOut = 1.0) {
+    const def = TRACKS[name];
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.linearRampToValueAtTime(1, start + fadeIn);
+    gain.gain.setValueAtTime(1, Math.max(start + fadeIn, end - fadeOut));
+    gain.gain.linearRampToValueAtTime(0.0001, end);
+    gain.connect(this.musicBus);
+    const send = this.ctx.createGain();
+    send.gain.value = 0.25;
+    gain.connect(send).connect(this.musicDelay);
+    const track = { name, def, gain, stepLength: 60 / def.bpm / 4 };
+    const voice = this.instrumentsFor(track);
+    let step = 0, bar = 0;
+    for (let t = start; t < end - 0.02; t += track.stepLength) {
+      def.layers(voice, step, def.chords[bar % def.chords.length], t, intensityAt(t), bar);
+      step++;
+      if (step >= 16) { step = 0; bar++; }
+    }
   }
 
   makeNoise(seconds) {
@@ -497,8 +522,8 @@ export class AudioEngine {
   }
 
   play(name, opts = {}) {
-    if (!this.ready || this.ctx.state !== 'running') return;
-    const t = this.ctx.currentTime + 0.005;
+    if (!this.ready || (opts.at === undefined && this.ctx.state !== 'running')) return;
+    const t = opts.at ?? this.ctx.currentTime + 0.005;
     const v = opts.volume ?? 1;
     const p = opts.pitch ?? 1;
     const out = this.output(opts.position, v, opts.reverb ?? 0.2);

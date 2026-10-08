@@ -39,6 +39,13 @@ async function boot() {
   game.showMainMenu();
   ui.hideLoading();
 
+  // ?trailer — hand the frame clock to the cinematic trailer director instead.
+  if (new URLSearchParams(location.search).has('trailer')) {
+    const { setupTrailer } = await import('./trailer/director.js');
+    await setupTrailer(game);
+    return;
+  }
+
   let last = performance.now();
   engine.renderer.setAnimationLoop((now) => {
     const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));

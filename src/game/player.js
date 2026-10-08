@@ -68,7 +68,7 @@ export class Player {
 
     // Flashlight rig follows the head, independent of avatar visibility.
     this.flashRig = new THREE.Object3D();
-    this.flashlight = new THREE.SpotLight(0xdff2ff, 60, 28, 0.52, 0.45, 1.6);
+    this.flashlight = new THREE.SpotLight(0xdff2ff, 110, 30, 0.52, 0.45, 1.5);
     this.flashlight.castShadow = true;
     this.flashlight.shadow.mapSize.set(1024, 1024);
     this.flashlight.shadow.camera.near = 0.2;
@@ -354,9 +354,9 @@ export class Player {
       // View arms sway with movement.
       const arms = this.viewArms.userData.arms;
       const reach = this.rig.reach;
-      arms[0].position.y = -0.3 + bobY * 0.8;
-      arms[1].position.y = -0.3 - bobY * 0.8;
-      arms[1].position.z = -0.25 - reach * 0.18;
+      arms[0].position.y = -0.36 + bobY * 0.8;
+      arms[1].position.y = -0.36 - bobY * 0.8;
+      arms[1].position.z = -0.42 - reach * 0.12;
       arms[0].rotation.x = this.body.grounded ? 0 : -0.25;
       arms[1].rotation.x = (this.body.grounded ? 0 : -0.25) + reach * 0.3;
     } else {
@@ -391,7 +391,7 @@ export class Player {
     this.headPosition(this.flashRig.position);
     _euler.set(this.pitch, this.yaw, 0);
     this.flashRig.quaternion.setFromEuler(_euler);
-    const target = this.flashlightOn ? 60 * (this.battery < 15 ? 0.4 + Math.random() * 0.6 : 1) : 0;
+    const target = this.flashlightOn ? 110 * (this.battery < 15 ? 0.4 + Math.random() * 0.6 : 1) : 0;
     // Intensity only — toggling .visible would change the light count and force
     // every material to recompile (a visible stutter).
     this.flashlight.intensity = THREE.MathUtils.lerp(this.flashlight.intensity, target, 1 - Math.exp(-dt * 20));

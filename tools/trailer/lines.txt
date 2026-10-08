@@ -1,0 +1,21 @@
+a01|A|Warning. Reactor core temperature: critical.
+a02|A|All crew have evacuated.
+n03|N|But someone... has to stay behind.
+n04|N|Meet SPARK.
+n05|N|Small. Determined. And the station's last hope.
+n06|N|Explore the darkness.
+n07|N|Dodge the scalding steam...
+n08|N|and find what was never meant to be seen.
+a09|A|U.V. ink. That must be the door code.
+n10|N|Restore the power...
+n11|N|before the clock runs out.
+n12|N|Stay out of sight.
+a13|A|Breaker holding. Lowest load, to highest.
+n14|N|And when the station starts to fall apart...
+n15|N|run.
+a16|A|Emergency thrusters unlocked.
+n17|N|Reach the core.
+n18|N|Seal it.
+n19|N|Save everyone.
+a20|A|Seal engaged. Core temperature falling. Station... safe.
+n21|N|Core Breach. Play it now, in your browser.

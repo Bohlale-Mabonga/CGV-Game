@@ -274,7 +274,8 @@ export function buildViewArms() {
   const arms = [];
   for (const side of [-1, 1]) {
     const pivot = new THREE.Group();
-    pivot.position.set(side * 0.28, -0.3, -0.25);
+    pivot.position.set(side * 0.3, -0.36, -0.42);
+    pivot.scale.setScalar(0.5);
     const fore = new THREE.Mesh(new THREE.CapsuleGeometry(0.045, 0.3, 4, 10), M.accent);
     fore.rotation.x = -Math.PI / 2 + 0.25;
     fore.position.z = -0.15;

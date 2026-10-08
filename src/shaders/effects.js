@@ -159,8 +159,8 @@ export function createSteamMaterial(map, { color = 0xe8f4ff, length = 3, spread 
         vec3 p = dir * t * uLength * reach + (side * cos(aSeed.x) + up2 * sin(aSeed.x)) * r;
         vec4 mv = modelViewMatrix * vec4(p, 1.0);
         gl_Position = projectionMatrix * mv;
-        gl_PointSize = uSize * (0.4 + t * 1.6) * uPixelRatio * (300.0 / max(0.1, -mv.z));
-        vAlpha = (1.0 - t) * smoothstep(0.0, 0.15, t) * mix(0.12, 0.65, uBurst);
+        gl_PointSize = uSize * (0.3 + t * 1.3) * uPixelRatio * (140.0 / max(0.5, -mv.z));
+        vAlpha = (1.0 - t) * smoothstep(0.0, 0.15, t) * mix(0.03, 0.5, uBurst);
       }
     `,
     fragmentShader: /* glsl */ `
@@ -523,7 +523,7 @@ export function createFireWallMaterial() {
         vec3 col = mix(vec3(0.6, 0.05, 0.0), vec3(1.0, 0.45, 0.05), smoothstep(0.2, 0.6, flame));
         col = mix(col, vec3(1.6, 1.3, 0.8), smoothstep(0.7, 1.0, flame));
         float a = smoothstep(0.05, 0.3, flame) * uIntensity;
-        gl_FragColor = vec4(col * (1.5 + vBillow) * a, a);
+        gl_FragColor = vec4(col * (0.55 + vBillow * 0.5) * a, a);
       }
     `,
     transparent: true,

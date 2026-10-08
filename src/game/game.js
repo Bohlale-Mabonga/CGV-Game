@@ -16,10 +16,10 @@ import { createReactorCoreMaterial, createCoronaMaterial } from '../shaders/reac
 import { createScanPulseMaterial } from '../shaders/effects.js';
 import { fmtTime } from '../ui/ui.js';
 
-const LEVELS = [Level1, Level2, Level3];
-const LEVEL_FX = [
+export const LEVELS = [Level1, Level2, Level3];
+export const LEVEL_FX = [
   { tint: [0.92, 1.0, 1.1], bloom: 0.8, vignette: 0.7, exposure: 1.15 },
-  { tint: [1.0, 1.0, 1.04], bloom: 0.6, vignette: 0.5, exposure: 1.0 },
+  { tint: [1.0, 1.0, 1.04], bloom: 0.55, vignette: 0.55, exposure: 0.85 },
   { tint: [1.12, 0.96, 0.86], bloom: 0.85, vignette: 0.6, exposure: 1.0 }
 ];
 const MINIMAP_SIZES = [190, 320, 0];
@@ -188,6 +188,7 @@ export class Game {
     robot.position.set(2.2, 0, 5.2);
     robot.rotation.y = -Math.PI * 0.12;
     robot.scale.setScalar(1.6);
+    robot.visible = true; // the template may be hidden while the player is in first person
     robot.traverse((o) => { if (o.isMesh) o.castShadow = true; });
     scene.add(robot);
     const rig = new RobotRig(robot, null);
@@ -295,9 +296,9 @@ export class Game {
       mesh.position.y = y;
       this.mapLevel.add(mesh);
     };
-    add(floors, 0x0d2a3c, 0);
-    add(lows, 0x1d6584, 0);
-    add(walls, 0x3aa6d6, 0);
+    add(walls, 0x0c2433, 0);
+    add(floors, 0x1b5674, 0);
+    add(lows, 0x5fc4ee, 0);
 
     // Markers.
     this.mapMarkers = [];
@@ -889,6 +890,10 @@ export class Game {
         break;
     }
 
+    if (!['playing', 'modal', 'dead'].includes(this.state)) {
+      this.engine.minimap = null;
+      this.ui.setMinimap(0, false);
+    }
     this.updateFx(dt);
     audio.updateListener(this.camera);
     if (settings.get('showFps') && this.engine.fps) this.ui.setFps(this.engine.fps);
@@ -988,7 +993,7 @@ export class Game {
     const inLevel = this.level && this.state !== 'menu';
     const low = inLevel && this.player.integrity < 30 ? 0.004 + Math.sin(this.time * 6) * 0.002 : 0;
     fx.uAberration.value = motion ? 0.0012 + low : 0.0005;
-    fx.uGrain.value = 0.03;
+    fx.uGrain.value = 0.012;
     const heat = inLevel ? (this.level.heat ?? 0) : 0;
     fx.uHeat.value = THREE.MathUtils.lerp(fx.uHeat.value, heat, 1 - Math.exp(-dt * 2));
   }

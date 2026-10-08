@@ -38,7 +38,7 @@ export class Door {
     const leafMat = new THREE.MeshStandardMaterial({ ...panels, color: 0x9aa6b4, metalness: 0.6, roughness: 0.5 });
     const frameMat = new THREE.MeshStandardMaterial({ color: 0x2a313a, metalness: 0.8, roughness: 0.35 });
     const hazardMat = new THREE.MeshStandardMaterial({ ...hazard, roughness: 0.6 });
-    this.statusMat = emissive(locked ? 0xff3344 : color, 3);
+    this.statusMat = emissive(locked ? 0xff3344 : color, 1.4);
     this.materials = [leafMat, frameMat, hazardMat, this.statusMat];
 
     const frame = new THREE.Group();
@@ -371,17 +371,17 @@ export class Pickup {
     const color = kind === 'battery' ? 0xffd43b : 0x37ff8b;
     if (kind === 'battery') {
       const cell = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.32, 16), new THREE.MeshStandardMaterial({ color: 0x1d2228, metalness: 0.7, roughness: 0.3 }));
-      const band = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.115, 0.12, 16), emissive(color, 2.5));
+      const band = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.115, 0.12, 16), emissive(color, 1.4));
       const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.05, 12), new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 1, roughness: 0.2 }));
       cap.position.y = 0.18;
       this.group.add(cell, band, cap);
     } else {
-      const mat = emissive(color, 2.2);
+      const mat = emissive(color, 1.2);
       const a = new THREE.Mesh(new RoundedBoxGeometry(0.34, 0.11, 0.11, 2, 0.03), mat);
       const b = new THREE.Mesh(new RoundedBoxGeometry(0.11, 0.34, 0.11, 2, 0.03), mat);
       this.group.add(a, b);
     }
-    this.halo = createHologramMaterial(color, 0.35);
+    this.halo = createHologramMaterial(color, 0.12);
     const halo = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 12), this.halo);
     this.group.add(halo);
     level.add(this.group);

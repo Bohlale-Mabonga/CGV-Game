@@ -64,7 +64,7 @@ export class Level3 extends Level {
       floor: this.standardSet('floor', 1, { color: 0x7c706a, metalness: 0.55 }),
       rubble: new THREE.MeshStandardMaterial({
         ...rubble, color: 0xb59a86, displacementScale: 0.45, displacementBias: -0.2,
-        emissive: 0xff4a10, emissiveIntensity: 1.6
+        emissive: 0xff4a10, emissiveIntensity: 0.9
       }),
       dark: new THREE.MeshStandardMaterial({ color: 0x2a2626, metalness: 0.8, roughness: 0.45, ...textures.brushed(), bumpScale: 0.4 }),
       hazard: this.standardSet('hazard', 1, { roughness: 0.6 }),

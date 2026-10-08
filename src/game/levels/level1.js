@@ -317,6 +317,8 @@ export class Level1 extends Level {
     // Bunks along the north and south walls.
     for (const z of [-26.9, -13.1]) {
       for (const x of [-24, -20.5, -17]) {
+        // Leave a gap under Mira's UV-ink code on the north wall.
+        if (z < -20 && x === -20.5) continue;
         const zz = z;
         this.box(2.4, 0.5, 1.6, x, 0.45, zz, this.mat.dark, { tile: 1 });
         this.box(2.3, 0.15, 1.5, x, 0.78, zz, this.mat.fabric, { collide: false });
@@ -491,7 +493,7 @@ export class Level1 extends Level {
     // Rotating amber beacon — a moving spot light sweeping the hall.
     const beacon = new THREE.Group();
     beacon.position.set(0, 3.45, -37);
-    const dome = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2), emissive(0xff8a1a, 4));
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2), emissive(0xff8a1a, 1.4));
     dome.rotation.x = Math.PI;
     beacon.add(dome);
     this.beaconSpot = new THREE.SpotLight(0xff8a1a, 70, 18, 0.35, 0.5, 1.6);
@@ -568,7 +570,7 @@ export class Level1 extends Level {
   }
 
   buildLights() {
-    const hemi = new THREE.HemisphereLight(0x2a3b55, 0x0b0b0e, 0.35);
+    const hemi = new THREE.HemisphereLight(0x3a4f70, 0x111116, 0.8);
     this.add(hemi);
     this.emergencyLight(-6, 3.3, -5.7, 0xff2a1a, 7, 11, 0.1);
     const pod = new THREE.PointLight(0x37c8ff, 6, 7, 1.8);
@@ -677,7 +679,7 @@ export class Level1 extends Level {
     u.uTime.value = t;
     player.flashlight.getWorldPosition(u.uLightPos.value);
     player.lookDirection(u.uLightDir.value);
-    u.uLightOn.value = player.flashlight.intensity / 60;
+    u.uLightOn.value = player.flashlight.intensity / 110;
     u.uCosOuter.value = Math.cos(player.flashlight.angle);
     u.uCosInner.value = Math.cos(player.flashlight.angle * (1 - player.flashlight.penumbra));
     if (!this.codeSeen && player.flashlightOn) {

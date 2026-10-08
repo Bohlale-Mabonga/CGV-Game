@@ -75,9 +75,9 @@ export function createReactorCoreMaterial() {
         float pulse = 0.85 + 0.15 * sin(uTime * (2.5 + uInstability * 9.0));
 
         vec3 hot = mix(uColorCore, uColorHot, plasma);
-        hot += vec3(1.0, 0.92, 0.7) * veins * (1.2 + uInstability * 2.5);
+        hot += vec3(1.0, 0.85, 0.55) * veins * (0.9 + uInstability * 2.0);
         hot += uColorHot * fresnel * 2.2;
-        hot *= (1.5 + vDisp * 5.0) * pulse;
+        hot *= (0.9 + vDisp * 3.5) * pulse;
 
         vec3 cool = mix(vec3(0.03, 0.12, 0.3), uColorCool, plasma);
         cool += vec3(0.7, 0.95, 1.0) * veins * 0.6;

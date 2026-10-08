@@ -6,7 +6,7 @@ export const CREDITS = [
     heading: 'Core Breach — the team',
     items: [
       { name: 'Kuhle Bikitsha · Thato Chuene · Ntobeko Mdakane · Nkosinathi Tshabalala · Olwethu Makhabane · Bohlale Mabonga', note: 'COMS3006A Computer Graphics and Visualisation, University of the Witwatersrand.' },
-      { name: 'Original work by the team', note: 'All gameplay code, level design, custom GLSL shaders (reactor core, hologram, UV ink, steam particles, scanner beam, energy flow, force field, lava, nebula sky, fire wall, scan pulse, dissolve, Station FX post-process), procedural textures, procedurally synthesised music & sound effects, and the 3D models (SPARK robot, keycard, crate) built in Blender.' }
+      { name: 'Original work by the team', note: 'All gameplay code, level design, custom GLSL shaders (reactor core, hologram, UV ink, steam particles, scanner beam, energy flow, force field, lava, nebula sky, fire wall, scan pulse, dissolve, Station FX post-process), procedural textures, procedurally synthesised music & sound effects, and the SPARK robot model — built in Blender 5.2 from our own Python script (tools/blender/build_spark.py) and exported as glTF.' }
     ]
   },
   {

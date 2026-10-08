@@ -95,7 +95,9 @@ export class Level2 extends Level {
 
     // Dynamic skybox: a nebula shader sphere that follows the camera.
     this.sky = new THREE.Mesh(new THREE.SphereGeometry(90, 48, 24), createNebulaSkyMaterial());
-    this.sky.renderOrder = -10;
+    // Drawn after all opaque geometry (depth pinned to the far plane), so the
+    // expensive nebula shader only runs on pixels actually visible through the dome.
+    this.sky.renderOrder = 1000;
     this.sky.frustumCulled = false;
     this.add(this.sky);
     game.scene.background = new THREE.Color(0x000000);
@@ -128,8 +130,8 @@ export class Level2 extends Level {
     const high = this.game.engine.quality.reflections;
     if (high) {
       const mirror = new Reflector(new THREE.CircleGeometry(CATWALK_IN, 64), {
-        textureWidth: Math.round(window.innerWidth * 0.5),
-        textureHeight: Math.round(window.innerHeight * 0.5),
+        textureWidth: Math.round(window.innerWidth * 0.32),
+        textureHeight: Math.round(window.innerHeight * 0.32),
         color: 0x7a8a99,
         clipBias: 0.003
       });
@@ -272,7 +274,7 @@ export class Level2 extends Level {
     }
 
     // Lighting: starlight through the dome (shadow-casting) + accent spots.
-    this.add(new THREE.HemisphereLight(0x8fb6ff, 0x1a1414, 0.9));
+    this.add(new THREE.HemisphereLight(0x8fb6ff, 0x1a1414, 0.6));
     const star = new THREE.DirectionalLight(0xcfe2ff, 1.6);
     star.position.set(8, 20, -6);
     star.castShadow = true;
@@ -283,7 +285,7 @@ export class Level2 extends Level {
     this.add(star);
     this.add(star.target);
     for (const a of [0.3, 2.4, 4.4]) {
-      const spot = new THREE.SpotLight(0x9fd0ff, 40, 20, 0.55, 0.7, 1.4);
+      const spot = new THREE.SpotLight(0x9fd0ff, 16, 20, 0.55, 0.7, 1.4);
       spot.position.set(Math.cos(a) * 14, 6.8, Math.sin(a) * 14);
       spot.target.position.set(Math.cos(a) * 6, 0, Math.sin(a) * 6);
       this.add(spot, spot.target);
