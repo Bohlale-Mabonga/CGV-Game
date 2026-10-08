@@ -50,3 +50,106 @@ body {
 .hud-timer {
   color: #ff9f43;
 }
+
+.minimap {
+  position: fixed;
+  right: 16px;
+  top: 16px;
+  width: 150px;
+  height: 150px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(55, 200, 255, 0.5);
+  border-radius: 6px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.minimap-player,
+.minimap-marker {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+}
+
+.minimap-player {
+  background: white;
+  box-shadow: 0 0 8px white;
+}
+
+.minimap-marker.keycard {
+  background: #37c8ff;
+  box-shadow: 0 0 8px #37c8ff;
+}
+
+.minimap-marker.door {
+  background: #f5d76e;
+  box-shadow: 0 0 8px #f5d76e;
+}
+
+.minimap-marker.core {
+  background: #ff5533;
+  box-shadow: 0 0 8px #ff5533;
+}
+
+.game-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  color: white;
+  background:
+    radial-gradient(circle at center, rgba(55, 200, 255, 0.16), transparent 35%),
+    rgba(0, 0, 0, 0.82);
+  z-index: 10;
+}
+
+.game-overlay h1 {
+  margin: 0;
+  font-size: 56px;
+  letter-spacing: 0;
+}
+
+.game-overlay p {
+  margin: 0 0 12px;
+  color: #c8d6e5;
+  font-size: 18px;
+}
+
+.game-overlay button {
+  min-width: 150px;
+  padding: 10px 18px;
+  border: 1px solid rgba(55, 200, 255, 0.8);
+  background: rgba(55, 200, 255, 0.18);
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.game-overlay button:hover {
+  background: rgba(55, 200, 255, 0.32);
+}
+
+.level-title {
+  position: fixed;
+  left: 50%;
+  top: 20%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 36px;
+  font-weight: bold;
+  text-shadow: 0 0 16px rgba(55, 200, 255, 0.8);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+  z-index: 6;
+}
+
+.level-title.visible {
+  opacity: 1;
+}
