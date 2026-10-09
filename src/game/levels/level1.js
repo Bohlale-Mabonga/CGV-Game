@@ -13,7 +13,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { Level } from '../level.js';
-import { Door, Keycard, SteamVent, Terminal, Pickup, makeSign, emissive } from '../objects/common.js';
+import { Door, Keycard, SteamVent, Terminal, Pickup, GlassTank, makeSign, emissive } from '../objects/common.js';
 import { textures, makeLabelTexture } from '../../engine/textures.js';
 import { createUvInkMaterial, createHologramMaterial } from '../../shaders/effects.js';
 import { audio } from '../../engine/audio.js';
@@ -253,6 +253,9 @@ export class Level1 extends Level {
     this.add(glass);
     for (const [y, h] of [[0.85, 0.12], [2.95, 0.12]]) this.box(0.2, h, 6.2, -7.9, y, 0, this.mat.dark, { collide: false });
 
+    // Glass coolant tanks (refraction) flanking the way into the corridor.
+    new GlassTank(this, { x: -4.4, z: -2.4, color: 0x37c8ff });
+    new GlassTank(this, { x: 4.0, z: 0.6, color: 0x37ff8b });
     this.crate(5.5, -3.5, 1.6, 1.2, 1.6);
     this.crate(6.2, -1.6, 1.2, 0.8, 1.2, this.mat.crateBlue);
     this.crate(-5.6, -4.6, 1.4, 1.4, 1.4);
@@ -518,19 +521,9 @@ export class Level1 extends Level {
 
   // ---------------------------------------------------------- coolant room --
   buildCoolant() {
-    // Coolant tanks in the far corners (curved capsule surfaces, brushed metal).
-    const tankMat = new THREE.MeshStandardMaterial({ color: 0x6d7a88, metalness: 0.85, roughness: 0.28, ...textures.brushed(), bumpScale: 0.4 });
-    for (const z of [-44.6, -31.4]) {
-      const tank = new THREE.Mesh(new THREE.CapsuleGeometry(0.9, 1.6, 6, 20), tankMat);
-      tank.position.set(-26.8, 1.7, z);
-      tank.castShadow = tank.receiveShadow = true;
-      this.add(tank);
-      this.physics.addCentered(-26.8, 1.7, z, 1.8, 3.4, 1.8);
-      const band = new THREE.Mesh(new THREE.TorusGeometry(0.92, 0.05, 8, 32), emissive(0x37c8ff, 2));
-      band.rotation.x = Math.PI / 2;
-      band.position.set(-26.8, 1.7, z);
-      this.add(band);
-    }
+    // Glass coolant tanks in the far corners: the steam and lane lights
+    // behind them warp through the glass (refraction).
+    for (const z of [-44.6, -31.4]) new GlassTank(this, { x: -26.8, z, radius: 0.9, height: 3.2, color: 0x37c8ff });
     // Vent gauntlet: three wall-to-wall curtains of floor vents. Each curtain
     // has one permanent gap (lit green) and the gaps alternate sides, so the
     // safe route zigzags: through a gap, along the safe strip between curtains,
