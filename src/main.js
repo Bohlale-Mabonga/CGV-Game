@@ -335,7 +335,7 @@ const powerJunctions = [
 const reactorConsole = createReactorConsole(
   new THREE.Vector3(0, 0.8, -23)
 );
-const controlRoom = createControlRoom(new THREE.Vector3(0, 0, -22));
+const controlRoom = createControlRoom(new THREE.Vector3(0, 0, -17.5));
 scene.add(controlRoom);
 
 for (const junction of powerJunctions) {
