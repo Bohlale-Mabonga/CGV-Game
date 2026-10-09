@@ -1,5 +1,3 @@
-// Player options, persisted to localStorage. Every read/write is guarded because
-// storage can be unavailable (private windows, blocked site data).
 
 const STORAGE_KEY = 'core-breach-settings-v2';
 const PROGRESS_KEY = 'core-breach-progress-v2';
