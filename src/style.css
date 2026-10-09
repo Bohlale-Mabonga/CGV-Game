@@ -305,3 +305,13 @@ kbd {
 .sg-result-title { font-family: var(--head); font-size: 11px; letter-spacing: 0.25em; color: var(--green); margin-bottom: 6px; }
 .signal .btn { min-width: 0; }
 .signal.solved .sg-grid, .signal.solved .sg-help { display: none; }
+
+/* How to play */
+.howto { max-width: 820px; font-size: 18px; line-height: 1.45; }
+.howto-lead { font-size: 20px; margin: 0 0 18px; }
+.howto-levels { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 8px; }
+.howto-levels > div { background: rgba(55, 200, 255, 0.06); border: 1px solid var(--line); border-left: 3px solid var(--amber); padding: 12px 14px; }
+.howto-levels span { display: block; font-family: var(--head); font-size: 12px; letter-spacing: 0.25em; color: var(--amber); margin-bottom: 6px; }
+.howto ul { margin: 6px 0 10px; padding-left: 22px; }
+.howto li { margin: 4px 0; }
+.howto kbd { font-size: 11px; }
