@@ -1,14 +1,4 @@
-// STATION FX — the custom full-screen post-processing pass.
-//
-// Runs after bloom and before tone mapping (OutputPass), on linear HDR colour.
-// Every uniform is driven by game state:
-//   uHeat        heat-haze distortion that grows as the meltdown progresses
-//   uAberration  radial chromatic aberration (damage, low integrity)
-//   uDamage      red edge flash when the robot is hurt
-//   uGlitch      horizontal tearing while the robot reboots after failure
-//   uTint        per-level colour grade
-//   uLetterbox   cinematic bars during level fly-throughs
-//   uFade        fade to black between scenes
+
 
 import * as THREE from 'three';
 import { NOISE_GLSL } from './noise.glsl.js';

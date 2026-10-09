@@ -1,13 +1,4 @@
-// REACTOR CORE — the game's centrepiece shader.
-//
-// Vertex stage: every vertex is pushed along its normal by two octaves of
-// animated simplex noise, so the sphere boils. The amplitude is driven by the
-// uInstability uniform, which the game raises as the meltdown timer drains and
-// lowers as the player activates stabiliser pylons.
-//
-// Fragment stage: a domain-warped fBm "plasma", bright vein ridges
-// (1 - |noise|)^n, and a Fresnel rim. uSealed blends the whole palette from
-// molten orange to calm blue when the player seals the core.
+
 
 import * as THREE from 'three';
 import { NOISE_GLSL } from './noise.glsl.js';

@@ -1,6 +1,4 @@
-// 3D simplex noise + fractal Brownian motion, shared by several shaders.
-// snoise() is adapted from "webgl-noise" by Ashima Arts / Stefan Gustavson
-// (MIT licence) — credited in the in-game credits screen.
+
 
 export const NOISE_GLSL = /* glsl */ `
 vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }

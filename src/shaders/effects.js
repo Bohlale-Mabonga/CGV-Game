@@ -1,5 +1,3 @@
-// Gameplay effect shaders. Each factory returns a THREE.ShaderMaterial whose
-// uniforms are driven every frame by the object that owns it.
 
 import * as THREE from 'three';
 import { NOISE_GLSL } from './noise.glsl.js';
