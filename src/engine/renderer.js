@@ -37,6 +37,8 @@ export class Engine {
     this.renderer.toneMappingExposure = 1.0;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
+    // Refraction (glass transmission) is rendered at half resolution to save fill rate.
+    this.renderer.transmissionResolutionScale = 0.5;
     container.appendChild(this.renderer.domElement);
     this.canvas = this.renderer.domElement;
 
