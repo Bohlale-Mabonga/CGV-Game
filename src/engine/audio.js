@@ -1,10 +1,3 @@
-// Procedural audio engine built directly on the Web Audio API.
-// Everything you hear — the adaptive soundtrack, sound effects and ambient
-// loops — is synthesised at runtime, so there are no audio files to download.
-//
-// Music uses a look-ahead scheduler (see Chris Wilson, "A Tale of Two Clocks"):
-// a cheap timer wakes every 25 ms and schedules notes slightly in the future on
-// the audio clock, which keeps timing sample-accurate even if a frame stutters.
 
 import { settings } from './settings.js';
 
@@ -119,6 +112,8 @@ export class AudioEngine {
     this.applyVolumes();
     this.scheduler = setInterval(() => this.schedule(), 25);
   }
+
+
 
   // Builds the mixing graph on any AudioContext — including an
   // OfflineAudioContext, which the trailer uses to render its soundtrack.
