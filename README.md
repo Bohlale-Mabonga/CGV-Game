@@ -54,7 +54,7 @@ Every third-party library, font and technique is listed, with sources and licenc
 
 
 
-## The three levels
+<!-- ## The three levels
 
 | Level | Challenge | What makes it different |
 |---|---|---|
@@ -101,4 +101,4 @@ The [documentation site](https://mellifluous-gumdrop-a66f6c.netlify.app/) explai
 3. Upload the zip in the group file manager (sgroup3906) and click **UnZip**.
 4. Open https://wmc.ms.wits.ac.za/students/sgroup3906/ and play through, with the browser console open, to check for errors.
 
-All paths are relative (`base: './'` in `vite.config.js`), so the game runs from the group's sub-folder.
+All paths are relative (`base: './'` in `vite.config.js`), so the game runs from the group's sub-folder. -->
