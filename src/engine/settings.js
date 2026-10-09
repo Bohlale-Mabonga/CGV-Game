@@ -45,6 +45,11 @@ function writeJson(key, value) {
 class Settings {
   constructor() {
     this.values = readJson(STORAGE_KEY, DEFAULT_SETTINGS);
+    // These are no longer exposed in the Options menu, so always use the
+    // defaults (a value saved by an older version could not be changed back).
+    for (const key of ['sensitivity', 'invertY', 'fov', 'motionFx', 'quality', 'showFps']) {
+      this.values[key] = DEFAULT_SETTINGS[key];
+    }
     this.listeners = new Set();
   }
 
