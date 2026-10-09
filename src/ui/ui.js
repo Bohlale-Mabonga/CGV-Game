@@ -26,7 +26,6 @@ const CONTROLS = [
   ['C / Ctrl', 'Crouch'],
   ['E / Left click', 'Interact (hold for some objects)'],
   ['F', 'Flashlight on/off'],
-  ['Q / Right click', 'Scanner ping — reveals items through walls'],
   ['V / Mouse wheel', 'First / third-person camera · zoom'],
   ['M / Tab', 'Minimap size'],
   ['H', 'Hint (press again for more detail)'],
@@ -101,6 +100,7 @@ export class UI {
         case 'play-level': this.emit('playLevel', Number(btn.dataset.level)); break;
         case 'options': this.showOptions(); break;
         case 'controls': this.showControls(); break;
+        case 'how-to-play': this.showHowToPlay(); break;
         case 'credits': this.showCredits(); break;
         case 'close-panel': this.closePanel(); break;
         case 'resume': this.emit('resume'); break;
@@ -142,6 +142,32 @@ export class UI {
     this.openPanel('Level select', `<div class="level-grid">${html}</div>`);
   }
 
+  showHowToPlay() {
+    const html = `
+      <div class="howto">
+        <p class="howto-lead">You are <b>SPARK</b>, a small maintenance robot. The station's reactor is overheating and the crew are gone. Cross three levels, reach the core and seal it before it breaches.</p>
+        <div class="howto-levels">
+          <div><span>01 · EXPLORE</span>Search the dark corridors with your flashlight and find the three keycards. Then unlock the reactor access door.</div>
+          <div><span>02 · SOLVE</span>Win the load diagnostic to learn the junction order, then switch the junctions on lowest load first while staying out of the sentry's beam.</div>
+          <div><span>03 · ESCAPE</span>Outrun the fire, jump the lava (press Space twice for thrusters), and bring the three pylons online. Then seal the core.</div>
+        </div>
+        <h3>Staying alive</h3>
+        <ul>
+          <li>Steam, the sentry, debris, pistons and lava drain your <b>health</b>. At zero, SPARK reboots at the last checkpoint.</li>
+          <li>Levels 2 and 3 have a <b>countdown</b>. If it reaches zero, the reactor breaches and you'll need to retry the level.</li>
+        </ul>
+        <h3>Tips</h3>
+        <ul>
+          <li>Follow the <b>objective</b> (top left) and the <b>map</b> (top right).</li>
+          <li>Press <kbd>E</kbd> to use things. Some need you to <b>hold</b> it.</li>
+          <li>Stuck? Press <kbd>H</kbd> for a hint. Press it again for more detail.</li>
+          <li>Read the <b>data logs</b>: they tell the story and hide clues.</li>
+          <li>Press <kbd>Esc</kbd> to pause, restart or change options.</li>
+        </ul>
+      </div>`;
+    this.openPanel('How to play', html);
+  }
+
   showControls() {
     const rows = CONTROLS.map(([k, v]) => `<div class="ctrl-row"><kbd>${k}</kbd><span>${v}</span></div>`).join('');
     this.openPanel('Controls', `<div class="ctrl-list">${rows}</div>`);
@@ -175,16 +201,8 @@ export class UI {
           ${toggle('voice', 'ARIA voice (speech)')}
           ${toggle('subtitles', 'Subtitles')}
         </div>
-        <div><h3>Controls & view</h3>
-          ${slider('sensitivity', 'Mouse sensitivity', 0.2, 3, 0.1, (v) => Number(v).toFixed(1))}
-          ${toggle('invertY', 'Invert mouse Y')}
-          ${slider('fov', 'Field of view', 60, 100, 1, (v) => `${v}°`)}
-          ${toggle('motionFx', 'Camera shake & head bob')}
-        </div>
         <div><h3>Game</h3>
           ${select('difficulty', 'Difficulty', Object.entries(DIFFICULTY).map(([k, d]) => [k, d.label]))}
-          ${select('quality', 'Graphics quality', [['low', 'Low (fast)'], ['medium', 'Medium'], ['high', 'High (mirror floor)']])}
-          ${toggle('showFps', 'Show FPS counter')}
           <p class="note">Difficulty changes timers, damage and hazard speed. It applies from the next level load.</p>
           <button class="btn small" data-action="reset-settings">Reset to defaults</button>
         </div>
@@ -788,6 +806,7 @@ const TEMPLATE = /* html */ `
     <nav class="menu-buttons">
       <button class="btn primary" data-action="new-game">New game</button>
       <button class="btn" data-action="level-select">Level select</button>
+      <button class="btn" data-action="how-to-play">How to play</button>
       <button class="btn" data-action="options">Options</button>
       <button class="btn" data-action="controls">Controls</button>
       <button class="btn" data-action="credits">Credits</button>
@@ -810,6 +829,7 @@ const TEMPLATE = /* html */ `
     <button class="btn" data-action="retry-checkpoint">Restart from checkpoint</button>
     <button class="btn" data-action="restart-level">Restart level</button>
     <button class="btn" data-action="restart-game">Restart game</button>
+    <button class="btn" data-action="how-to-play">How to play</button>
     <button class="btn" data-action="options">Options</button>
     <button class="btn" data-action="controls">Controls</button>
     <button class="btn" data-action="quit">Quit to main menu</button>
