@@ -14,7 +14,7 @@ Find the three reactor keycards (red, blue, gold), insert them at the card reade
 
 | Area | What happens there |
 |---|---|
-| Maintenance Dock | Start point: SPARK's charging pod, a window onto space (the static skybox) |
+| Maintenance Dock | Start point: SPARK's charging pod and a curved viewport onto space; the thick glass refracts the star field |
 | Main corridor | Two pairs of floor steam vents, and a chest-height steam leak you must **crouch** under |
 | Crew Quarters | The **red keycard** on a desk, plus Mira's log hinting that she painted the coolant door code in UV ink above her bunk |
 | Storage Bay (8 m tall) | **Blue keycard** at the top. Climb crates, jump a collapsed section of catwalk, and time a steam vent |

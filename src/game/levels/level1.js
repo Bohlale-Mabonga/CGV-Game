@@ -236,21 +236,41 @@ export class Level1 extends Level {
     this.physics.addCentered(0, 1.3, 5.6, 2.2, 2.6, 0.4);
     this.addUpdatable((dt, t) => { holo.uniforms.uTime.value = t; });
 
-    // Viewport window showing the static star skybox.
-    const windowFrame = new THREE.Mesh(new THREE.PlaneGeometry(6, 2), new THREE.MeshBasicMaterial({ color: 0x000000, colorWrite: false }));
-    windowFrame.position.set(-7.86, 1.9, 0);
-    windowFrame.rotation.y = Math.PI / 2;
-    windowFrame.renderOrder = -1;
-    this.add(windowFrame);
-    this.dockWindow = windowFrame;
-    // Glass pane with environment reflection, and a frame.
-    const glass = new THREE.Mesh(new THREE.PlaneGeometry(6, 2), new THREE.MeshPhysicalMaterial({
-      color: 0x88aacc, metalness: 0, roughness: 0.05, transparent: true, opacity: 0.12,
-      envMap: textures.starCube(), envMapIntensity: 1.5
+    // Viewport window onto space: thick, slightly curved glass that REFRACTS
+    // the static star skybox. The pane samples the star cube map with
+    // CubeRefractionMapping: each pixel looks up the view ray bent by Snell's
+    // law (refractionRatio ≈ 1 / index of refraction). Because the pane is
+    // curved, the bend changes across it, so the stars shift and stretch
+    // like a lens as you move.
+    const R = 9, half = 0.333; // a shallow cylinder segment, 6 m wide, bulging 0.5 m into the room
+    const paneGeo = new THREE.CylinderGeometry(R, R, 2, 48, 1, true, Math.PI / 2 - half, half * 2);
+    const refractCube = textures.starCube().clone();
+    refractCube.mapping = THREE.CubeRefractionMapping;
+    refractCube.needsUpdate = true;
+    const paneMat = new THREE.MeshBasicMaterial({ envMap: refractCube, refractionRatio: 0.72 });
+    paneMat.color.setRGB(2.2, 2.4, 2.9); // lift the faint star field so the window reads as a view into space
+    const pane = new THREE.Mesh(paneGeo, paneMat);
+    pane.position.set(-7.86 - R * Math.cos(half), 1.9, 0);
+    this.add(pane);
+    // The pane bulges ~0.5 m into the room, so give it a solid collider
+    // covering the bulge; otherwise SPARK and the camera could walk into the glass.
+    this.physics.addBox(-8, 0, -3.1, -7.28, 3.2, 3.1);
+    // Thin glowing frame following the curved top and bottom edges.
+    for (const y of [-1, 1]) {
+      const arc = [];
+      for (let i = 0; i <= 24; i++) {
+        const a = Math.PI / 2 - half + (half * 2 * i) / 24;
+        arc.push(new THREE.Vector3(pane.position.x + R * Math.sin(a) + 0.02, 1.9 + y * 1.0, R * Math.cos(a)));
+      }
+      this.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(arc), 48, 0.03, 6, false), emissive(0x37c8ff, 1.0)));
+    }
+    // A faint reflective layer on the same surface, so the glass also catches highlights.
+    const sheen = new THREE.Mesh(paneGeo, new THREE.MeshPhysicalMaterial({
+      color: 0x88aacc, metalness: 0, roughness: 0.05, transparent: true, opacity: 0.1,
+      envMap: textures.starCube(), envMapIntensity: 1.2, depthWrite: false
     }));
-    glass.position.set(-7.84, 1.9, 0);
-    glass.rotation.y = Math.PI / 2;
-    this.add(glass);
+    sheen.position.copy(pane.position).add(new THREE.Vector3(0.01, 0, 0));
+    this.add(sheen);
     for (const [y, h] of [[0.85, 0.12], [2.95, 0.12]]) this.box(0.2, h, 6.2, -7.9, y, 0, this.mat.dark, { collide: false });
 
     this.crate(5.5, -3.5, 1.6, 1.2, 1.6);

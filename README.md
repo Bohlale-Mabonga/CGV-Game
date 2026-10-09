@@ -86,7 +86,7 @@ The in-game **How to play** screen covers the basics.
 - **SPARK** is a hierarchical, animated robot model built in **Blender** (from our own Python script).
 - **13 custom GLSL shaders** and a post-processing pass, including the boiling reactor core, the flashlight-revealed UV ink, GPU steam particles, the sentry's scanner beam, lava, the nebula sky and the fire wall.
 - **Our own physics:** gravity, jumping, crouching, stair climbing, curved-wall collision, moving platforms and jump pads.
-- **3D effects:** multi-light scenes, shadows, real-time reflections, static and animated skyboxes, bloom, and generated normal, roughness, bump and displacement maps.
+- **3D effects:** multi-light scenes, shadows, real-time reflections, refraction, static and animated skyboxes, bloom, and generated normal, roughness, bump and displacement maps.
 - **Procedural audio:** all music and sound effects are synthesised live, with an adaptive soundtrack, 3D sound and a voiced station AI (ARIA).
 - **Menus and extras:** pause, restart without reloading, options, difficulty levels, hints, story logs, ranks and best times.
 

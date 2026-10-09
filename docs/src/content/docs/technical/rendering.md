@@ -29,6 +29,7 @@ After that, the minimap is drawn into the top-right corner with a second, orthog
 | Dynamic skybox | The animated nebula shader (Level 2) |
 | Shadows | Flashlight and starlight shadow maps |
 | Reflections | Real-time mirror floor (`Reflector`, High quality); environment-map reflections on metal and glass |
+| Refraction | The Level 1 dock's curved space window: the star cube map is sampled with `CubeRefractionMapping` (`refractionRatio` 0.72), so view rays bend through the glass. Because the pane is curved, the bend varies across it and the stars stretch and shift as you move, like looking through a thick lens. A faint reflective layer sits on top, so the glass both refracts and reflects |
 | Textures beyond colour | Normal, roughness, bump, **displacement**, alpha and emissive maps (below) |
 
 ## Procedural textures (`engine/textures.js`)
