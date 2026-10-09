@@ -4,19 +4,27 @@ title: Project Overview
 
 # Project Overview
 
-**Core Breach** is a 3D browser game built with Three.js 
+**Core Breach** is a 3D browser game built with Three.js for COMS3006A.
 
-The player controls a small maintenance robot inside a space station whose reactor is overheating. The objective is to move through the station and reach the reactor core to seal it before the station is lost to meltdown.
+You play SPARK, a small maintenance robot left behind on the space station HELIOS-9 after the crew evacuate. The reactor is overheating, and SPARK has to cross three very different parts of the station to reach the core and seal it before it breaches.
 
-## Course Requirements Addressed
+- **Play it:** https://wmc.ms.wits.ac.za/students/sgroup3906/
+- **Source code:** the `Cooked` branch of the GitHub repository.
 
-- A fully playable 3D game with three distinct levels/stages
-- Keyboard and mouse controls
-- Hierarchical modelling (corridor segments, keycards, power junctions, reactor core all built as parent/child object groups)
-- Multiple light types (ambient, directional, spot, point)
-- A custom shader (reactor core, both vertex and fragment stages)
-- An objective/progression system connecting all three levels
+## The three levels
 
-## Current Status
+| Level | Kind of challenge | What only this level has |
+|---|---|---|
+| 1 · Corridors | Explore | Darkness, a flashlight with a battery, a door code painted in UV ink that only the flashlight reveals, a keypad, crouching under steam, crate platforming |
+| 2 · Control Room | Solve | A countdown, a sentry turret you hide from, a signal-memory minigame that reveals the junction order, junctions to switch on lowest load first, jump pads, a pipe-routing puzzle |
+| 3 · Meltdown | Escape | A wall of fire chasing you, falling debris, a lava pit, the thruster double-jump, crushing pistons, the reactor-core finale |
 
-All three levels have a working first playable pass: movement, interaction, objectives, win and lose conditions. See [Game Design](/game-design/concept/) for level-by-level detail and [Technical Documentation](/technical/technology-stack/) for how it's built.
+## Highlights
+
+- **Two camera views:** first person (with robot arms attached to the camera) and third person (a camera that pulls in when a wall gets in the way).
+- **Minimap:** a picture-in-picture top-down map that turns with the player.
+- **Custom shaders:** 13 hand-written GLSL shader materials plus a full-screen post-processing pass. See [Shaders](/technical/shaders/).
+- **Physics:** our own character controller with gravity, jumping, crouching, collision, stair climbing and moving platforms. See [Physics & Collision](/technical/collision/).
+- **Procedural assets:** every texture is generated in code, and all music and sound is synthesised live in the browser.
+- **Blender robot:** SPARK was built in Blender from a Python script. See [3D Models](/technical/models/).
+- **Full menus:** main menu, level select, options, pause and restart without reloading the page, plus hints, ranks and best times.

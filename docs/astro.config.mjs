@@ -44,9 +44,14 @@ export default defineConfig({
 						{ label: 'Technology Stack', slug: 'technical/technology-stack' },
 						{ label: 'Architecture', slug: 'technical/architecture' },
 						{ label: 'Three.js', slug: 'technical/threejs' },
-						{ label: 'Scene Design', slug: 'technical/scene-design' },
+						{ label: 'Scene Design & Hierarchy', slug: 'technical/scene-design' },
+						{ label: 'Shaders', slug: 'technical/shaders' },
+						{ label: 'Rendering & Effects', slug: 'technical/rendering' },
 						{ label: 'Lighting', slug: 'technical/lighting' },
-						{ label: 'Collision', slug: 'technical/collision' },
+						{ label: 'Physics & Collision', slug: 'technical/collision' },
+						{ label: 'Audio', slug: 'technical/audio' },
+						{ label: '3D Models (Blender)', slug: 'technical/models' },
+						{ label: 'Performance', slug: 'technical/performance' },
 					],
 				},
 
@@ -75,6 +80,11 @@ export default defineConfig({
 						{ label: 'LAMP Server', slug: 'deployment/lamp-server' },
 						{ label: 'Moodle Submission', slug: 'deployment/moodle' },
 					],
+				},
+
+				{
+					label: 'Media',
+					items: [{ label: 'Trailer', slug: 'media/trailer' }],
 				},
 
 				{
