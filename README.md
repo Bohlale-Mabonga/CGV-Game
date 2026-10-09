@@ -94,11 +94,3 @@ The [documentation site](https://mellifluous-gumdrop-a66f6c.netlify.app/) explai
 
 
 
-## Deploying to the LAMP server
-
-1. Run `npm run build`.
-2. Zip the **contents** of `dist/`, so that `index.html` is at the top of the zip.
-3. Upload the zip in the group file manager (sgroup3906) and click **UnZip**.
-4. Open https://wmc.ms.wits.ac.za/students/sgroup3906/ and play through, with the browser console open, to check for errors.
-
-All paths are relative (`base: './'` in `vite.config.js`), so the game runs from the group's sub-folder. -->
