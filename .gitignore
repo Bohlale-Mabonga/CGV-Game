@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Rendered trailer video (upload to YouTube; too large for git)
+media/*.mp4

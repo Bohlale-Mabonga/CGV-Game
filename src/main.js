@@ -1,61 +1,60 @@
-import * as THREE from 'three';
-import { PlayerControls } from './player/controls.js';
-import { createCorridorSegment } from './world/corridor.js';
-import { createFlashlight } from './lights/flashlight.js';
-import { createKeycard, createDoor } from './world/interactables.js';
-import { InteractionSystem } from './player/interaction-system.js';
-import { ObjectiveTracker } from './game/objectives.js';
+// CORE BREACH — entry point.
+// Boots the renderer, UI and input, generates assets behind a loading screen,
+// then hands control to the Game's main loop.
 
-//Scene setup
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x000000);
+import './style.css';
+import { Engine } from './engine/renderer.js';
+import { Input } from './engine/input.js';
+import { UI } from './ui/ui.js';
+import { Game } from './game/game.js';
 
-const camera = new THREE.PerspectiveCamera(
-  70,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  100
-);
-camera.position.set(0, 1.6, 4);
+async function boot() {
+  const ui = new UI(document.querySelector('#ui'));
+  ui.setLoading(0.02, 'Booting maintenance unit…');
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
+  let engine;
+  try {
+    engine = new Engine(document.querySelector('#app'));
+  } catch (error) {
+    ui.setLoading(0, 'WebGL 2 is required. Please use an up-to-date Chrome.');
+    console.error(error);
+    return;
+  }
+  const input = new Input(engine.canvas);
+  const game = new Game({ engine, ui, input });
+  window.__game = game; // handy for debugging in the console
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  // Fonts are drawn into canvas textures (signs, screens), so wait for them.
+  try {
+    await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 2500))]);
+    await Promise.all([
+      document.fonts.load('700 40px Orbitron'),
+      document.fonts.load('700 40px Rajdhani')
+    ]);
+  } catch {
+    /* fall back to system fonts */
+  }
 
-//Corridor
-const corridor = createCorridorSegment(20, 4, 3);
-corridor.position.z = -6;
-scene.add(corridor);
+  await game.init((fraction, text) => ui.setLoading(fraction, text));
+  game.showMainMenu();
+  ui.hideLoading();
 
-//Flashlight
-createFlashlight(camera);
+  // ?trailer — hand the frame clock to the cinematic trailer director instead.
+  if (new URLSearchParams(location.search).has('trailer')) {
+    const { setupTrailer } = await import('./trailer/director.js');
+    await setupTrailer(game);
+    return;
+  }
 
-//Player movement
-const controls = new PlayerControls(camera, renderer.domElement);
-
-const objectiveTracker = new ObjectiveTracker(3);
-const interactionSystem = new InteractionSystem(camera, scene, objectiveTracker);
-
-interactionSystem.register(createKeycard(new THREE.Vector3(-1, 1, -4)));
-interactionSystem.register(createKeycard(new THREE.Vector3(1, 1, -10)));
-interactionSystem.register(createKeycard(new THREE.Vector3(0, 1, -14)));
-interactionSystem.register(createDoor(new THREE.Vector3(0, 1.1, -16)));
-
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
-
-const clock = new THREE.Clock();
-function animate() {
-  requestAnimationFrame(animate);
-  const delta = clock.getDelta();
-  controls.update(delta);
-  interactionSystem.update();  
-  renderer.render(scene, camera);
+  let last = performance.now();
+  engine.renderer.setAnimationLoop((now) => {
+    const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
+    last = now;
+    game.update(dt);
+    engine.render();
+    engine.adapt(dt);
+    input.endFrame();
+  });
 }
-animate();
 
+boot();
