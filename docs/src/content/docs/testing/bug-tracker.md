@@ -28,4 +28,5 @@ Bugs found during the automated testing pass, and how each was fixed.
 | No clear way past the Coolant Pumps vents (playtest feedback) | Four wall-to-wall curtains with no gaps and no safe space between them | Three rows, each with a green-lit gap on alternating sides, and 1.1 m safe strips between rows. Tested: zigzag route takes 0 hits; a straight dash without timing still gets hit | Fixed |
 | "Integrity" was unclear to players (playtest feedback) | Technical term for health | Renamed to "Health" in the HUD, the warning and pickup messages | Fixed |
 | Log 02 temperature in kelvin (playtest feedback) | Unfamiliar unit | Now shown in °C (2,527 °C) | Fixed |
+| Refraction listed in the rubric but missing from the game (rubric review) | Only reflections had been implemented | Added refracting glass coolant tanks (transmission, IOR 1.5) in Level 1; costs about 4 FPS when on screen | Fixed |
 | Mixed kW/MW/GW junction loads were confusing (playtest feedback) | Unit conversion added difficulty without adding fun | All loads in MW. Junction readings are now revealed by winning the new load-diagnostic minigame, which also shows the order | Changed |
