@@ -367,10 +367,13 @@ export class Player {
       _pivot.addScaledVector(_right, 0.35);
       const back = _desired.copy(_camDir).negate();
       const hit = this.game.physics.raycast(_pivot, back, this.tpDistance + 0.3, (c) => c.tag !== 'trigger' && c.blocksSight);
-      const allowed = Math.max(0.6, Math.min(this.tpDistance, hit - 0.3));
+      // Never let the camera sit inside a wall: it may come right up to SPARK
+      // (the robot is hidden below when the camera is that close).
+      const allowed = Math.max(0.15, Math.min(this.tpDistance, hit - 0.25));
       // Pull in instantly (no clipping), ease back out smoothly.
       this.tpCurrent = allowed < this.tpCurrent ? allowed : THREE.MathUtils.lerp(this.tpCurrent, allowed, 1 - Math.exp(-dt * 4));
       cam.position.copy(_pivot).addScaledVector(back, this.tpCurrent);
+      this.robot.visible = this.tpCurrent > 0.75;
       cam.position.x += sx * 0.15;
       cam.position.y += sy * 0.15;
       _lookTarget.copy(_pivot).addScaledVector(_camDir, 4);

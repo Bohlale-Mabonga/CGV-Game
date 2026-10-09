@@ -29,4 +29,6 @@ Bugs found during the automated testing pass, and how each was fixed.
 | "Integrity" was unclear to players (playtest feedback) | Technical term for health | Renamed to "Health" in the HUD, the warning and pickup messages | Fixed |
 | Log 02 temperature in kelvin (playtest feedback) | Unfamiliar unit | Now shown in °C (2,527 °C) | Fixed |
 | Refraction listed in the rubric but missing from the game (rubric review) | Only reflections had been implemented | Glass tanks were tried and rejected (too bright). The dock window is now curved glass that refracts the star skybox (cube-map refraction). No measurable frame-rate cost | Fixed |
+| Could walk partly into the dock window (playtest feedback) | The curved pane bulges into the room but had no collider | Added a collider covering the bulge; SPARK stops 40 cm in front of the glass | Fixed |
+| Third-person camera could end up inside walls | The camera's wall-avoidance never moved closer than 0.6 m behind SPARK | It can now come right up to SPARK, and the robot model hides when the camera is that close | Fixed |
 | Mixed kW/MW/GW junction loads were confusing (playtest feedback) | Unit conversion added difficulty without adding fun | All loads in MW. Junction readings are now revealed by winning the new load-diagnostic minigame, which also shows the order | Changed |
