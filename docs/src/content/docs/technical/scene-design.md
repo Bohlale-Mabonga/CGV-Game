@@ -45,7 +45,6 @@ The Blender model uses the same node names, so the same code animates it.
 | Keycard | Keycard → card (spins and bobs) + hologram beam + base | The card animates on its own while the base stays still |
 | Flashlight | Flashlight rig → SpotLight + target | The rig follows the head in both camera modes, so the beam always comes from SPARK |
 | First-person arms | Camera → ViewArms → arm pivots | Objects that move with the camera, as the rubric asks |
-| Glass coolant tank | Tank → top/bottom caps, glass shell, coil (helix `TubeGeometry`), centre rod | Place and collide as one unit; the refracting glass and the coil inside always stay together |
 | Rotating beacons | Beacon group → dome + SpotLight + target | Rotating the group sweeps the light around the room |
 
 ## Objects that move with the world vs. with the camera

@@ -29,7 +29,6 @@ After that, the minimap is drawn into the top-right corner with a second, orthog
 | Dynamic skybox | The animated nebula shader (Level 2) |
 | Shadows | Flashlight and starlight shadow maps |
 | Reflections | Real-time mirror floor (`Reflector`, High quality); environment-map reflections on metal and glass |
-| Refraction | Glass coolant tanks in Level 1 (dock and Coolant Pumps): `MeshPhysicalMaterial` with `transmission`, index of refraction 1.5 and thickness. The scene behind the glass, and the glowing coil inside, bend through it. Rendered at half resolution (`transmissionResolutionScale = 0.5`) |
 | Textures beyond colour | Normal, roughness, bump, **displacement**, alpha and emissive maps (below) |
 
 ## Procedural textures (`engine/textures.js`)
