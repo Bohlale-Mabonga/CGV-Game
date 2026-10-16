@@ -139,12 +139,14 @@ export class Level2 extends Level {
       mirror.rotation.x = -Math.PI / 2;
       mirror.position.y = 0.001;
       this.add(mirror);
+      this.mirror = mirror;
     }
     const floorSet = textures.set('floor', 12, 12);
     const innerFloor = new THREE.Mesh(new THREE.CircleGeometry(CATWALK_IN, 64), new THREE.MeshStandardMaterial({
       ...floorSet, color: 0x9aa4ae, metalness: 0.75, roughness: high ? 0.35 : 0.3,
       transparent: high, opacity: high ? 0.78 : 1
     }));
+    this.innerFloor = innerFloor;
     innerFloor.rotation.x = -Math.PI / 2;
     innerFloor.position.y = 0.01;
     innerFloor.receiveShadow = true;
@@ -275,17 +277,19 @@ export class Level2 extends Level {
     }
 
     // Lighting: starlight through the dome (shadow-casting) + accent spots.
-    this.add(new THREE.HemisphereLight(0x8fb6ff, 0x1a1414, 0.6));
+    const q = this.game.engine.quality;
+    // On Low graphics the accent spots are dropped; a brighter sky light makes up for them.
+    this.add(new THREE.HemisphereLight(0x8fb6ff, 0x1a1414, q.fullLights ? 0.6 : 0.95));
     const star = new THREE.DirectionalLight(0xcfe2ff, 1.6);
     star.position.set(8, 20, -6);
-    star.castShadow = true;
+    star.castShadow = q.extraShadows;
     star.shadow.mapSize.set(this.game.engine.quality.shadowSize, this.game.engine.quality.shadowSize);
     const sc = star.shadow.camera;
     sc.left = -18; sc.right = 18; sc.top = 18; sc.bottom = -18; sc.near = 1; sc.far = 50;
     star.shadow.bias = -0.0006;
     this.add(star);
     this.add(star.target);
-    for (const a of [0.3, 2.4, 4.4]) {
+    for (const a of q.fullLights ? [0.3, 2.4, 4.4] : []) {
       const spot = new THREE.SpotLight(0x9fd0ff, 16, 20, 0.55, 0.7, 1.4);
       spot.position.set(Math.cos(a) * 14, 6.8, Math.sin(a) * 14);
       spot.target.position.set(Math.cos(a) * 6, 0, Math.sin(a) * 6);
@@ -305,6 +309,16 @@ export class Level2 extends Level {
       new Pickup(this, { position: new THREE.Vector3(-13.8, CATWALK_Y + 1.0, 6.5), kind: 'repair' }),
       new Pickup(this, { position: new THREE.Vector3(9.5, 1.0, -4), kind: 'repair' })
     ];
+  }
+
+  // Called when Auto graphics steps down mid-level: switch the mirror off.
+  applyQuality(q) {
+    if (this.mirror && !q.reflections) {
+      this.mirror.visible = false;
+      this.innerFloor.material.transparent = false;
+      this.innerFloor.material.opacity = 1;
+      this.innerFloor.material.needsUpdate = true;
+    }
   }
 
   // ---------------------------------------------------------------- turret --

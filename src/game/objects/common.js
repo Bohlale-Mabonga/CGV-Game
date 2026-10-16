@@ -251,7 +251,8 @@ export class SteamVent {
 
     this.material = createSteamMaterial(textures.softDot(), { length, spread: radius * 0.9, size });
     this.material.uniforms.uDir.value.copy(this.direction);
-    this.points = new THREE.Points(createSteamGeometry(140), this.material);
+    const count = Math.round(140 * (level.game.engine.quality.particles ?? 1));
+    this.points = new THREE.Points(createSteamGeometry(count), this.material);
     this.points.frustumCulled = false;
     this.group.add(this.points);
     level.add(this.group);

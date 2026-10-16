@@ -203,7 +203,9 @@ export class UI {
         </div>
         <div><h3>Game</h3>
           ${select('difficulty', 'Difficulty', Object.entries(DIFFICULTY).map(([k, d]) => [k, d.label]))}
+          ${select('graphics', 'Graphics', [['auto', 'Auto (recommended)'], ['performance', 'Performance'], ['quality', 'Quality']])}
           <p class="note">Difficulty changes timers, damage and hazard speed. It applies from the next level load.</p>
+          <p class="note">Graphics: Auto picks a setting for this computer and lowers it if the game slows down. Choose Performance if you still see lag.</p>
           <button class="btn small" data-action="reset-settings">Reset to defaults</button>
         </div>
       </div>`;

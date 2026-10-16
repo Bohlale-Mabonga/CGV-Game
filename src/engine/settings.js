@@ -12,6 +12,7 @@ export const DEFAULT_SETTINGS = {
   fov: 75,
   quality: 'high', // low | medium | high
   difficulty: 'normal', // story | normal | hard
+  graphics: 'auto', // auto | performance | quality
   showFps: false,
   motionFx: true, // camera shake, chromatic aberration, head bob
   subtitles: true

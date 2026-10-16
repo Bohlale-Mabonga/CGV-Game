@@ -181,13 +181,18 @@ export class Level1 extends Level {
   }
 
   // Wall-mounted emergency light fixture with a real point light.
-  emergencyLight(x, y, z, color, intensity = 6, distance = 10, flicker = 0) {
+  // essential = false: purely atmospheric. On Low graphics only the glowing
+  // fixture is kept (no real light), which saves lighting cost on every pixel.
+  emergencyLight(x, y, z, color, intensity = 6, distance = 10, flicker = 0, essential = true) {
     const fixture = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.12, 0.25), emissive(color, 4));
     fixture.position.set(x, y, z);
     this.add(fixture);
-    const light = new THREE.PointLight(color, intensity, distance, 1.8);
-    light.position.set(x, y - 0.25, z);
-    this.add(light);
+    const withLight = essential || this.game.engine.quality.fullLights;
+    const light = withLight ? new THREE.PointLight(color, intensity, distance, 1.8) : { intensity: 0 };
+    if (withLight) {
+      light.position.set(x, y - 0.25, z);
+      this.add(light);
+    }
     if (flicker > 0) {
       const base = intensity;
       let next = 0;
@@ -607,7 +612,7 @@ export class Level1 extends Level {
   buildLights() {
     const hemi = new THREE.HemisphereLight(0x3a4f70, 0x111116, 0.8);
     this.add(hemi);
-    this.emergencyLight(-6, 3.3, -5.7, 0xff2a1a, 7, 11, 0.1);
+    this.emergencyLight(-6, 3.3, -5.7, 0xff2a1a, 7, 11, 0.1, false);
     const pod = new THREE.PointLight(0x37c8ff, 6, 7, 1.8);
     pod.position.set(0, 1.2, 4.2);
     this.add(pod);
@@ -615,7 +620,7 @@ export class Level1 extends Level {
     this.emergencyLight(-8, 3.3, -32.3, 0xff6a1a, 7, 12);
     this.emergencyLight(-14.3, 3.3, -20, 0xff2a1a, 6, 12, 0.35);
     this.emergencyLight(-14.3, 3.3, -42, 0xff7a2a, 8, 14);
-    this.emergencyLight(0, 3.3, -47.7, 0x37ff8b, 6, 9);
+    this.emergencyLight(0, 3.3, -47.7, 0x37ff8b, 6, 9, 0, false);
   }
 
   // ------------------------------------------------------------- logic --

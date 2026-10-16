@@ -24,8 +24,9 @@ export async function setupTrailer(game) {
   engine.adapt = () => {};
   engine.resolutionScale = 1;
   // Trailer-only settings (not persisted).
-  Object.assign(settings.values, { voice: false, subtitles: false, motionFx: true, quality: 'high', fov: 60, difficulty: 'normal' });
-  engine.resize();
+  Object.assign(settings.values, { voice: false, subtitles: false, motionFx: true, graphics: 'quality', fov: 60, difficulty: 'normal' });
+  engine.tier = 'high';
+  engine.applyQuality();
   game.ui.hideAll();
   document.body.style.cursor = 'none';
 

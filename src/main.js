@@ -52,7 +52,7 @@ async function boot() {
     last = now;
     game.update(dt);
     engine.render();
-    engine.adapt(dt);
+    engine.adapt(dt, game.state === 'playing');
     input.endFrame();
   });
 }

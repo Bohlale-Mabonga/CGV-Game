@@ -153,11 +153,14 @@ export class Level3 extends Level {
       g.position.set(W - 0.3, 4.4, z);
       const dome = new THREE.Mesh(new THREE.SphereGeometry(0.25, 14, 10), this.mat.red);
       g.add(dome);
-      const spot = new THREE.SpotLight(0xff2a1a, 80, 18, 0.4, 0.5, 1.6);
-      const target = new THREE.Object3D();
-      target.position.set(-3, -3, 0);
-      g.add(spot, target);
-      spot.target = target;
+      // On Low graphics only the middle beacon casts real light; the others just glow.
+      if (this.game.engine.quality.fullLights || z === -56) {
+        const spot = new THREE.SpotLight(0xff2a1a, 80, 18, 0.4, 0.5, 1.6);
+        const target = new THREE.Object3D();
+        target.position.set(-3, -3, 0);
+        g.add(spot, target);
+        spot.target = target;
+      }
       this.add(g);
       this.beacons.push(g);
     }
@@ -219,7 +222,7 @@ export class Level3 extends Level {
     lava.position.set(0, -3.2, -54.25);
     this.add(lava);
     this.lavaMat = lava.material;
-    for (const z of [-45, -62]) {
+    for (const z of this.game.engine.quality.fullLights ? [-45, -62] : [-54]) {
       const glow = new THREE.PointLight(0xff5a10, 30, 16, 1.6);
       glow.position.set(0, -1.6, z);
       this.add(glow);

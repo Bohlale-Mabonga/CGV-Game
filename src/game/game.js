@@ -97,7 +97,23 @@ export class Game {
     onProgress(1, 'Ready');
 
     this.bindUi();
-    this.engine.onQualityChange = () => {};
+    // When the graphics tier changes, resize shadow maps and let the level react.
+    this.engine.onQualityChange = (q) => {
+      this.scene.traverse((o) => {
+        if (o.isLight && o.castShadow && o.shadow && o.shadow.mapSize.x !== q.shadowSize) {
+          o.shadow.mapSize.set(q.shadowSize, q.shadowSize);
+          o.shadow.map?.dispose();
+          o.shadow.map = null;
+        }
+      });
+      this.level?.applyQuality?.(q);
+    };
+    this.engine.onTierDrop = () => {
+      if (this.tierToastShown) return; // tell the player once, not on every step
+      this.tierToastShown = true;
+      this.ui.toast('Graphics lowered automatically to keep the game smooth', '#37c8ff');
+    };
+    this.engine.onQualityChange(this.engine.quality);
     this.input.onLockChange = (locked, error) => this.onLockChange(locked, error);
     this.engine.canvas.addEventListener('click', () => {
       if (this.state === 'playing' && !this.input.locked) this.input.requestLock();
@@ -999,7 +1015,7 @@ export class Game {
     const low = inLevel && this.player.integrity < 30 ? 0.004 + Math.sin(this.time * 6) * 0.002 : 0;
     fx.uAberration.value = motion ? 0.0012 + low : 0.0005;
     fx.uGrain.value = 0.012;
-    const heat = inLevel ? (this.level.heat ?? 0) : 0;
+    const heat = inLevel && this.engine.quality.heatHaze ? (this.level.heat ?? 0) : 0;
     fx.uHeat.value = THREE.MathUtils.lerp(fx.uHeat.value, heat, 1 - Math.exp(-dt * 2));
   }
 }
