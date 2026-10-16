@@ -81,7 +81,7 @@ export function createReactorCoreMaterial() {
   });
 }
 
-// Additive atmospheric halo rendered on the back faces of a larger sphere.
+
 export function createCoronaMaterial() {
   return new THREE.ShaderMaterial({
     uniforms: {
