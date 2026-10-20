@@ -16,9 +16,7 @@ const WORLD_VERTEX = /* glsl */ `
 `;
 
 // ---------------------------------------------------------------------------
-// HOLOGRAM — keycards, waypoint arrows and ARIA's projector.
-// Vertex: rare horizontal "glitch" slices shear the mesh sideways.
-// Fragment: Fresnel rim + scrolling world-space scanlines + flicker.
+// 
 // ---------------------------------------------------------------------------
 export function createHologramMaterial(color = 0x37c8ff, opacity = 1) {
   return new THREE.ShaderMaterial({
@@ -67,10 +65,7 @@ export function createHologramMaterial(color = 0x37c8ff, opacity = 1) {
 }
 
 // ---------------------------------------------------------------------------
-// UV INK — a door code painted in "UV-reactive" paint that is invisible until
-// the flashlight cone falls on it. The fragment shader reproduces the spot
-// light's cone test itself (position, direction, inner/outer cosine) so the
-// reveal matches the real light exactly.
+// UV INK 
 // ---------------------------------------------------------------------------
 export function createUvInkMaterial(map) {
   return new THREE.ShaderMaterial({
@@ -119,9 +114,7 @@ export function createUvInkMaterial(map) {
 }
 
 // ---------------------------------------------------------------------------
-// STEAM — GPU particle system. Particle motion is computed entirely in the
-// vertex shader from a per-particle random attribute (aSeed) and uTime, so the
-// CPU uploads nothing per frame. uBurst (0..1) is the vent's state.
+// STEAM 
 // ---------------------------------------------------------------------------
 export function createSteamMaterial(map, { color = 0xe8f4ff, length = 3, spread = 0.6, size = 1.4 } = {}) {
   return new THREE.ShaderMaterial({
@@ -194,9 +187,7 @@ export function createSteamGeometry(count) {
 }
 
 // ---------------------------------------------------------------------------
-// SECURITY SCANNER — a fake volumetric wedge of light. Brightest along its
-// two angular edges, with range rings sweeping outward and noise "dust".
-// uAlert (0..1) blends from cyan to red as the turret detects the player.
+// SECURITY SCANNER — \.
 // ---------------------------------------------------------------------------
 export function createScannerMaterial(radius, halfAngle) {
   return new THREE.ShaderMaterial({
@@ -269,9 +260,7 @@ export function createWedgeGeometry(radius, height, halfAngle, segments = 24) {
 }
 
 // ---------------------------------------------------------------------------
-// ENERGY FLOW — power cables in the control room. uv.x runs along the cable.
-// uProgress (game state) is how far power has been routed; pulses only travel
-// through the energised part and a bright "front" marks the leading edge.
+// ENERGY FLOW — 
 // ---------------------------------------------------------------------------
 export function createEnergyFlowMaterial(color = 0x37ff8b) {
   return new THREE.ShaderMaterial({
@@ -365,9 +354,7 @@ export function createForceFieldMaterial(color = 0x37c8ff) {
 }
 
 // ---------------------------------------------------------------------------
-// LAVA — the molten pit beneath the broken meltdown floor. The vertex stage
-// ripples the surface; the fragment stage builds flowing crust and glowing
-// cracks from domain-warped noise. uHeat rises with the meltdown.
+// LAVA — 
 // ---------------------------------------------------------------------------
 export function createLavaMaterial() {
   return new THREE.ShaderMaterial({
@@ -413,10 +400,7 @@ export function createLavaMaterial() {
 }
 
 // ---------------------------------------------------------------------------
-// NEBULA SKY — the control room's dynamic skybox seen through its glass dome.
-// A sphere that follows the camera; the fragment shader paints fBm nebula,
-// twinkling hashed stars and a lit planet. uSpin rotates the view slowly, as
-// if the station itself were turning.
+// NEBULA SKY — 
 // ---------------------------------------------------------------------------
 export function createNebulaSkyMaterial() {
   return new THREE.ShaderMaterial({
@@ -485,9 +469,7 @@ export function createNebulaSkyMaterial() {
 }
 
 // ---------------------------------------------------------------------------
-// FIRE WALL — the collapse front chasing the player through the meltdown.
-// The vertex stage billows the sheet toward the player with fBm; the fragment
-// stage maps rising noise through a black-body style colour ramp.
+// FIRE WALL —
 // ---------------------------------------------------------------------------
 export function createFireWallMaterial() {
   return new THREE.ShaderMaterial({
@@ -532,8 +514,7 @@ export function createFireWallMaterial() {
 }
 
 // ---------------------------------------------------------------------------
-// SCAN PULSE — the robot's sonar ping. An expanding sphere whose Fresnel rim
-// and procedural latitude rings fade out as uProgress goes 0 → 1.
+// SCAN PULSE — 
 // ---------------------------------------------------------------------------
 export function createScanPulseMaterial() {
   return new THREE.ShaderMaterial({
@@ -564,9 +545,7 @@ export function createScanPulseMaterial() {
 }
 
 // ---------------------------------------------------------------------------
-// DISSOLVE — injected into a built-in MeshStandardMaterial with
-// onBeforeCompile, so fallen debris keeps full PBR lighting while it burns
-// away along a noise threshold with a glowing ember edge.
+// DISSOLVE 
 // ---------------------------------------------------------------------------
 export function applyDissolve(material, edgeColor = new THREE.Color(1.0, 0.45, 0.1)) {
   const uniforms = {
