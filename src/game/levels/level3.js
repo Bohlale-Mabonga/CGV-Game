@@ -318,6 +318,7 @@ export class Level3 extends Level {
     const pitWall = new THREE.Mesh(new THREE.CylinderGeometry(PIT_R, PIT_R * 0.8, 6, 64, 1, true), new THREE.MeshStandardMaterial({ ...textures.set('rubble', 6, 2), color: 0x6a5a50, side: THREE.BackSide, emissive: 0xff4a10, emissiveIntensity: 1.2 }));
     pitWall.position.set(0, -3, cz);
     this.add(pitWall);
+    this.pitWallMat = pitWall.material;
     const pitLava = new THREE.Mesh(new THREE.CircleGeometry(PIT_R, 48), createLavaMaterial());
     pitLava.rotation.x = -Math.PI / 2;
     pitLava.position.set(0, -5.5, cz);
@@ -536,6 +537,9 @@ export class Level3 extends Level {
       f.warn.visible = false;
       f.column.visible = false;
     }
+    // Store original emissive colors for the blue transition
+    this._originalBandColor = this.bandMat.emissive.clone();
+    this._originalPitWallColor = this.pitWallMat.emissive.clone();
     this.after(4.5, () => {
       if (!this.completed) {
         this.completed = true;
@@ -776,9 +780,12 @@ export class Level3 extends Level {
     cu.uInstability.value = THREE.MathUtils.lerp(cu.uInstability.value, instability, 1 - Math.exp(-dt * 2));
     if (this.sealed) {
       this.sealTime += dt;
-      cu.uSealed.value = Math.min(1, this.sealTime / 2.5);
-      this.coreLight.color.lerpColors(_orange, _cyan, cu.uSealed.value);
-      this.bandMat.emissive.copy(this.coreLight.color);
+      const sealProgress = Math.min(1, this.sealTime / 2.5);
+      cu.uSealed.value = sealProgress;
+      // Transition all lights and materials to blue
+      this.coreLight.color.lerpColors(_orange, _cyan, sealProgress);
+      this.bandMat.emissive.lerpColors(this._originalBandColor, _cyan, sealProgress);
+      this.pitWallMat.emissive.lerpColors(this._originalPitWallColor, _cyan, sealProgress);
     }
     const co = this.coronaMat.uniforms;
     co.uTime.value = t;
