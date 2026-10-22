@@ -308,7 +308,9 @@ export class Level3 extends Level {
     floor.position.set(0, 0, cz);
     floor.receiveShadow = true;
     this.add(floor);
-    const lip = new THREE.Mesh(new THREE.TorusGeometry(PIT_R, 0.12, 8, 96), this.mat.orange);
+    this.bandMat = emissive(0xff6a20, 3);
+
+    const lip = new THREE.Mesh(new THREE.TorusGeometry(PIT_R, 0.12, 8, 96), this.bandMat);
     lip.rotation.x = Math.PI / 2;
     lip.position.set(0, 0.02, cz);
     this.add(lip);
@@ -341,7 +343,7 @@ export class Level3 extends Level {
     housing.position.set(0, 0, cz);
     this.add(housing);
     for (const y of [3, 9.6]) {
-      const band = new THREE.Mesh(new THREE.TorusGeometry(CHAMBER_R - 0.1, 0.07, 8, 128), this.mat.orange);
+      const band = new THREE.Mesh(new THREE.TorusGeometry(CHAMBER_R - 0.1, 0.07, 8, 128), this.bandMat);
       band.rotation.x = Math.PI / 2;
       band.position.set(0, y, cz);
       this.add(band);
@@ -776,6 +778,7 @@ export class Level3 extends Level {
       this.sealTime += dt;
       cu.uSealed.value = Math.min(1, this.sealTime / 2.5);
       this.coreLight.color.lerpColors(_orange, _cyan, cu.uSealed.value);
+      this.bandMat.emissive.copy(this.coreLight.color);
     }
     const co = this.coronaMat.uniforms;
     co.uTime.value = t;
