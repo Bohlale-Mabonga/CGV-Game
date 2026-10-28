@@ -628,7 +628,12 @@ export class Level1 extends Level {
     const game = this.game;
     game.ui.toast(`${card.name} keycard recovered (${n}/3)`, card.color.getStyle());
     game.ui.setKeycards(this.keycards.map((k) => ({ color: '#' + k.color.getHexString(), have: k.collected })));
-    if (n === 1) game.say('Keycard authenticated. Two more, SPARK. The Storage Bay and the Coolant Pumps are your best bets.');
+    if (n === 1) {
+      // Point to wherever the remaining cards actually are (any order is possible).
+      const rooms = { RED: 'the Crew Quarters', BLUE: 'the Storage Bay', GOLD: 'the Coolant Pumps' };
+      const left = this.keycards.filter((k) => !k.collected).map((k) => rooms[k.name]);
+      game.say(`Keycard authenticated. Two more, SPARK. ${left[0][0].toUpperCase()}${left[0].slice(1)} and ${left[1]} are your best bets.`);
+    }
     if (n === 2) game.say('Two of three. Core temperature is still climbing.');
     if (n === 3) {
       game.say('All three keycards. Get to the card reader at the reactor access door.');

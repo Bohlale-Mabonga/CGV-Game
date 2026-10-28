@@ -295,7 +295,8 @@ export class SteamVent {
     if (this.state !== 'burst') return false;
     const d = this.direction;
     // Test a few points up the robot's body against the steam cylinder.
-    for (let k = 0.15; k <= 0.95; k += 0.4) {
+    // Feet, middle and head (a fixed list: summing 0.4 steps overshoots 0.95 and skipped the head).
+    for (const k of [0.15, 0.55, 0.95]) {
       _v.set(feet.x, feet.y + height * k, feet.z).sub(this.position);
       const along = _v.dot(d);
       if (along < -0.2 || along > this.length * 0.9) continue;
