@@ -209,6 +209,7 @@ export class UI {
           ${toggle('subtitles', 'Subtitles')}
         </div>
         <div><h3>Game</h3>
+          ${slider('sensitivity', 'Mouse sensitivity', 0.2, 3, 0.1, (v) => `${Number(v).toFixed(1)}×`)}
           ${select('difficulty', 'Difficulty', Object.entries(DIFFICULTY).map(([k, d]) => [k, d.label]))}
           <p class="note">Difficulty changes timers, damage and hazard speed. It applies from the next level load.</p>
           <button class="btn small" data-action="reset-settings">Reset to defaults</button>
@@ -221,7 +222,7 @@ export class UI {
       input.addEventListener('input', () => {
         let value = input.type === 'checkbox' ? input.checked : input.type === 'range' ? Number(input.value) : input.value;
         settings.set(key, value);
-        if (out) out.textContent = key.includes('Volume') ? pct(value) : key === 'fov' ? `${value}°` : key === 'sensitivity' ? Number(value).toFixed(1) : value;
+        if (out) out.textContent = key.includes('Volume') ? pct(value) : key === 'fov' ? `${value}°` : key === 'sensitivity' ? `${Number(value).toFixed(1)}×` : value;
       });
     }
   }
