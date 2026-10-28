@@ -318,6 +318,7 @@ export class Level3 extends Level {
     const pitWall = new THREE.Mesh(new THREE.CylinderGeometry(PIT_R, PIT_R * 0.8, 6, 64, 1, true), new THREE.MeshStandardMaterial({ ...textures.set('rubble', 6, 2), color: 0x6a5a50, side: THREE.BackSide, emissive: 0xff4a10, emissiveIntensity: 1.2 }));
     pitWall.position.set(0, -3, cz);
     this.add(pitWall);
+    this.pitWallMat = pitWall.material;
     const pitLava = new THREE.Mesh(new THREE.CircleGeometry(PIT_R, 48), createLavaMaterial());
     pitLava.rotation.x = -Math.PI / 2;
     pitLava.position.set(0, -5.5, cz);
@@ -457,7 +458,8 @@ export class Level3 extends Level {
         radius: 1.9,
         hold: 1.5,
         prompt: 'Hold E — bring stabiliser online',
-        enabled: () => !pylon.online,
+        // Only from on top of the platform, so the climb cannot be skipped.
+        enabled: () => !pylon.online && this.game.player.position.y > def.top - 0.3,
         onInteract: () => this.activatePylon(pylon)
       });
       this.addMarker(center, '#37c8ff', 'square', { visible: () => !pylon.online });
@@ -536,6 +538,9 @@ export class Level3 extends Level {
       f.warn.visible = false;
       f.column.visible = false;
     }
+    // Store original emissive colors for the blue transition
+    this._originalBandColor = this.bandMat.emissive.clone();
+    this._originalPitWallColor = this.pitWallMat.emissive.clone();
     this.after(4.5, () => {
       if (!this.completed) {
         this.completed = true;
@@ -655,7 +660,7 @@ export class Level3 extends Level {
     const active = pointInBox(p, this.zoneA);
     this.debrisTimer -= dt;
     if (active && this.debrisTimer <= 0) {
-      this.debrisTimer = 0.9 + Math.random() * 0.8;
+      this.debrisTimer = (1.5 + Math.random() * 1.0) / settings.difficulty.beamSpeed;
       const d = this.debris.find((k) => k.state === 'idle');
       if (d) {
         // Land ahead of the player, biased toward where they are heading.
@@ -675,17 +680,17 @@ export class Level3 extends Level {
       d.t += dt;
       if (d.state === 'warn') {
         d.warn.material.opacity = 0.4 + 0.5 * Math.abs(Math.sin(d.t * 10));
-        d.warn.scale.setScalar(1.2 - d.t * 0.25);
-        if (d.t > 0.7) {
+        d.warn.scale.setScalar(1.2 - d.t * 0.18);
+        if (d.t > 1.1 / settings.difficulty.beamSpeed) {
           d.state = 'fall';
           d.mesh.visible = true;
           d.mesh.position.set(d.target.x, 7, d.target.z);
-          d.vy = -4;
+          d.vy = -2;
           d.spin.set(Math.random() * 6, Math.random() * 6, Math.random() * 6);
           d.dissolve.uDissolve.value = 0;
         }
       } else if (d.state === 'fall') {
-        d.vy -= 30 * dt;
+        d.vy -= 18 * settings.difficulty.beamSpeed * dt;
         d.mesh.position.y += d.vy * dt;
         d.mesh.rotation.x += d.spin.x * dt;
         d.mesh.rotation.z += d.spin.z * dt;
@@ -776,9 +781,12 @@ export class Level3 extends Level {
     cu.uInstability.value = THREE.MathUtils.lerp(cu.uInstability.value, instability, 1 - Math.exp(-dt * 2));
     if (this.sealed) {
       this.sealTime += dt;
-      cu.uSealed.value = Math.min(1, this.sealTime / 2.5);
-      this.coreLight.color.lerpColors(_orange, _cyan, cu.uSealed.value);
-      this.bandMat.emissive.copy(this.coreLight.color);
+      const sealProgress = Math.min(1, this.sealTime / 2.5);
+      cu.uSealed.value = sealProgress;
+      // Transition all lights and materials to blue
+      this.coreLight.color.lerpColors(_orange, _cyan, sealProgress);
+      this.bandMat.emissive.lerpColors(this._originalBandColor, _cyan, sealProgress);
+      this.pitWallMat.emissive.lerpColors(this._originalPitWallColor, _cyan, sealProgress);
     }
     const co = this.coronaMat.uniforms;
     co.uTime.value = t;

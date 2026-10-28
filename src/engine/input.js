@@ -81,6 +81,9 @@ export class Input {
   }
 
   handleKeyDown(e) {
+    // Typing in a text field (e.g. the leaderboard name box) is not game input.
+    const tag = e.target?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
     if (this.onKey && this.onKey(e)) {
       e.preventDefault();
       return;
