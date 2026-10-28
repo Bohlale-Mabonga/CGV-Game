@@ -5,6 +5,7 @@
 import { settings, progress, DIFFICULTY } from '../engine/settings.js';
 import { audio } from '../engine/audio.js';
 import { CREDITS } from './credits.js';
+import { leaderboard, BOARDS } from '../engine/leaderboard.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 
@@ -14,6 +15,11 @@ function fmtTime(seconds) {
   const r = Math.floor(s % 60);
   const t = Math.floor((s * 10) % 10);
   return `${m}:${String(r).padStart(2, '0')}.${t}`;
+}
+
+// Names come from other players: always escape before putting them in HTML.
+function escapeHtml(text) {
+  return String(text).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 export { fmtTime };
@@ -97,6 +103,7 @@ export class UI {
       switch (action) {
         case 'new-game': this.emit('newGame'); break;
         case 'level-select': this.showLevelSelect(); break;
+        case 'leaderboard': this.showLeaderboard(); break;
         case 'play-level': this.emit('playLevel', Number(btn.dataset.level)); break;
         case 'options': this.showOptions(); break;
         case 'controls': this.showControls(); break;
@@ -433,7 +440,71 @@ export class UI {
     this.el.intro.classList.add('hidden');
   }
 
-  showResult({ kind, title, subtitle, stats = [], buttons = [], rank = null, record = false }) {
+  // ------------------------------------------------------------ leaderboard --
+  async showLeaderboard(difficulty = settings.get('difficulty'), board = 'run') {
+    const labels = { run: 'Full run', level1: 'Level 1', level2: 'Level 2', level3: 'Level 3' };
+    const tabs = BOARDS.map((b) => `<button class="lb-tab ${b === board ? 'on' : ''}" data-board="${b}">${labels[b]}</button>`).join('');
+    const diffs = Object.entries(DIFFICULTY).map(([k, d]) => `<option value="${k}" ${k === difficulty ? 'selected' : ''}>${d.label}</option>`).join('');
+    this.openPanel('Leaderboard', `
+      <div class="lb-bar"><div class="lb-tabs">${tabs}</div>
+        <label class="lb-diff">Difficulty <select id="lb-diff">${diffs}</select></label></div>
+      <div id="lb-table" class="lb-table"><p class="note">Loading…</p></div>
+      <p class="note" id="lb-source"></p>`);
+    const body = this.el.panelBody;
+    body.querySelectorAll('.lb-tab').forEach((t) => t.addEventListener('click', () => this.showLeaderboard($('#lb-diff').value, t.dataset.board)));
+    $('#lb-diff').addEventListener('change', (e) => this.showLeaderboard(e.target.value, board));
+    const { online, boards } = await leaderboard.fetchTop(difficulty);
+    if (!body.isConnected || !$('#lb-table')) return;
+    const rows = boards[board] ?? [];
+    $('#lb-table').innerHTML = rows.length
+      ? `<table><tr><th>#</th><th>Name</th><th>Time</th>${board === 'run' ? '<th>Rank</th>' : ''}<th>Reboots</th><th>Hints</th><th>Date</th></tr>${rows.map((r, i) => `
+          <tr class="${leaderboard.isMine(r.id) ? 'mine' : ''}"><td>${i + 1}</td><td>${escapeHtml(r.name)}</td><td>${fmtTime(r.time)}</td>${board === 'run' ? `<td>${escapeHtml(r.rank ?? '')}</td>` : ''}<td>${Number(r.deaths) || 0}</td><td>${Number(r.hints) || 0}</td><td>${escapeHtml(r.date ?? '')}</td></tr>`).join('')}</table>`
+      : '<p class="note">No times yet. Be the first!</p>';
+    $('#lb-source').textContent = online
+      ? 'Online leaderboard: everyone who plays the game shares it.'
+      : 'The online leaderboard can’t be reached, so these are scores saved on this computer.';
+  }
+
+  // The "submit your time" box on result screens.
+  bindScoreSubmit(submit) {
+    const input = $('#lb-name');
+    const button = $('#lb-send');
+    const status = $('#lb-status');
+    if (!input) return;
+    input.value = leaderboard.getName();
+    const send = async () => {
+      const name = leaderboard.cleanName(input.value);
+      if (!name) {
+        status.textContent = 'Use 3–12 letters, numbers, spaces, - or _.';
+        status.className = 'lb-status bad';
+        return;
+      }
+      leaderboard.setName(name);
+      button.disabled = true;
+      input.disabled = true;
+      status.textContent = 'Saving…';
+      status.className = 'lb-status';
+      const r = await leaderboard.submit({ ...submit, name });
+      if (!r.ok) {
+        status.textContent = r.error;
+        status.className = 'lb-status bad';
+        button.disabled = false;
+        input.disabled = false;
+        return;
+      }
+      status.className = 'lb-status good';
+      status.textContent = r.online
+        ? `You placed #${r.position} of ${r.total} on the online leaderboard!`
+        : `Saved on this computer: #${r.position} of ${r.total} (online leaderboard unavailable).`;
+      button.textContent = 'Saved';
+    };
+    button.addEventListener('click', send);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') send();
+    });
+  }
+
+  showResult({ kind, title, subtitle, stats = [], buttons = [], rank = null, record = false, submit = null }) {
     const statHtml = stats.map(([k, v]) => `<div class="stat"><span>${k}</span><b>${v}</b></div>`).join('');
     const buttonHtml = buttons.map(([action, label, primary]) => `<button class="btn ${primary ? 'primary' : ''}" data-action="${action}">${label}</button>`).join('');
     this.el.result.className = `screen result ${kind}`;
@@ -443,9 +514,15 @@ export class UI {
         <div class="result-sub">${subtitle}</div>
         ${rank ? `<div class="rank">RANK <b>${rank}</b>${record ? '<span class="record">NEW BEST</span>' : ''}</div>` : ''}
         <div class="stats">${statHtml}</div>
+        ${submit ? `<div class="lb-submit">
+          <div class="lb-submit-title">LEADERBOARD · ${submit.label} · ${DIFFICULTY[submit.difficulty]?.label ?? ''}</div>
+          <div class="lb-submit-row"><input id="lb-name" maxlength="12" placeholder="Your name" autocomplete="off" spellcheck="false"><button class="btn small" id="lb-send">Submit time</button></div>
+          <div class="lb-status" id="lb-status"></div>
+        </div>` : ''}
         <div class="result-buttons">${buttonHtml}</div>
       </div>`;
     this.el.result.classList.remove('hidden');
+    if (submit) this.bindScoreSubmit(submit);
   }
 
   hideResult() {
@@ -806,6 +883,7 @@ const TEMPLATE = /* html */ `
     <nav class="menu-buttons">
       <button class="btn primary" data-action="new-game">New game</button>
       <button class="btn" data-action="level-select">Level select</button>
+      <button class="btn" data-action="leaderboard">Leaderboard</button>
       <button class="btn" data-action="how-to-play">How to play</button>
       <button class="btn" data-action="options">Options</button>
       <button class="btn" data-action="controls">Controls</button>

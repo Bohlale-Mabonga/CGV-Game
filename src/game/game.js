@@ -480,7 +480,11 @@ export class Game {
         ...(level.timeLimit ? [['Time remaining', fmtTime(level.timeLeft)]] : []),
         ...(this.stats.secrets ? [['Secrets', this.stats.secrets]] : [])
       ],
-      buttons: [['continue', `Continue to level ${meta.number + 1}`, true], ['restart-level', 'Replay level'], ['quit', 'Main menu']]
+      buttons: [['continue', `Continue to level ${meta.number + 1}`, true], ['restart-level', 'Replay level'], ['quit', 'Main menu']],
+      submit: {
+        board: `level${meta.number}`, label: `Level ${meta.number}`, time: level.time,
+        difficulty: settings.get('difficulty'), deaths: this.stats.deaths, hints: this.stats.hintsUsed
+      }
     });
   }
 
@@ -550,7 +554,12 @@ export class Game {
           ['Thruster boosts', total.boosts],
           ['Difficulty', settings.difficulty.label]
         ],
-        buttons: [['continue', 'Play again', true], ['credits', 'Credits'], ['quit', 'Main menu']]
+        buttons: [['continue', 'Play again', true], ['credits', 'Credits'], ['quit', 'Main menu']],
+        // A full run goes on the main board; a game started from level select
+        // only counts as a Level 3 time.
+        submit: fullRun
+          ? { board: 'run', label: 'Full run', time: total.time, rank, difficulty: settings.get('difficulty'), deaths: total.deaths, hints: total.hintsUsed }
+          : { board: 'level3', label: 'Level 3', time: this.level.time, difficulty: settings.get('difficulty'), deaths: this.stats.deaths, hints: this.stats.hintsUsed }
       });
     }, 2600);
   }
