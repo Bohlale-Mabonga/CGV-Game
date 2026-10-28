@@ -458,7 +458,8 @@ export class Level3 extends Level {
         radius: 1.9,
         hold: 1.5,
         prompt: 'Hold E — bring stabiliser online',
-        enabled: () => !pylon.online,
+        // Only from on top of the platform, so the climb cannot be skipped.
+        enabled: () => !pylon.online && this.game.player.position.y > def.top - 0.3,
         onInteract: () => this.activatePylon(pylon)
       });
       this.addMarker(center, '#37c8ff', 'square', { visible: () => !pylon.online });
