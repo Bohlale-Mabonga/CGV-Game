@@ -659,7 +659,7 @@ export class Level3 extends Level {
     const active = pointInBox(p, this.zoneA);
     this.debrisTimer -= dt;
     if (active && this.debrisTimer <= 0) {
-      this.debrisTimer = 0.9 + Math.random() * 0.8;
+      this.debrisTimer = (1.5 + Math.random() * 1.0) / settings.difficulty.beamSpeed;
       const d = this.debris.find((k) => k.state === 'idle');
       if (d) {
         // Land ahead of the player, biased toward where they are heading.
@@ -679,17 +679,17 @@ export class Level3 extends Level {
       d.t += dt;
       if (d.state === 'warn') {
         d.warn.material.opacity = 0.4 + 0.5 * Math.abs(Math.sin(d.t * 10));
-        d.warn.scale.setScalar(1.2 - d.t * 0.25);
-        if (d.t > 0.7) {
+        d.warn.scale.setScalar(1.2 - d.t * 0.18);
+        if (d.t > 1.1 / settings.difficulty.beamSpeed) {
           d.state = 'fall';
           d.mesh.visible = true;
           d.mesh.position.set(d.target.x, 7, d.target.z);
-          d.vy = -4;
+          d.vy = -2;
           d.spin.set(Math.random() * 6, Math.random() * 6, Math.random() * 6);
           d.dissolve.uDissolve.value = 0;
         }
       } else if (d.state === 'fall') {
-        d.vy -= 30 * dt;
+        d.vy -= 18 * settings.difficulty.beamSpeed * dt;
         d.mesh.position.y += d.vy * dt;
         d.mesh.rotation.x += d.spin.x * dt;
         d.mesh.rotation.z += d.spin.z * dt;
