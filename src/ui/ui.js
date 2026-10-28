@@ -508,6 +508,7 @@ export class UI {
   showResult({ kind, title, subtitle, stats = [], buttons = [], rank = null, record = false, submit = null }) {
     const statHtml = stats.map(([k, v]) => `<div class="stat"><span>${k}</span><b>${v}</b></div>`).join('');
     const buttonHtml = buttons.map(([action, label, primary]) => `<button class="btn ${primary ? 'primary' : ''}" data-action="${action}">${label}</button>`).join('');
+    this.showResume(false); // never leave "Click to resume" showing behind a result
     this.el.result.className = `screen result ${kind}`;
     this.el.result.innerHTML = `
       <div class="result-card">

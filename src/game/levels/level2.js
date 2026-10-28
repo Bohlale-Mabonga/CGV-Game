@@ -319,7 +319,8 @@ export class Level2 extends Level {
     collar.rotation.x = Math.PI / 2;
     collar.position.y = 1.55;
     turret.add(base, collar);
-    this.physics.addCentered(0, 0.9, 0, 2.0, 1.8, 2.0);
+    // Its own body must not block its line of sight (the eye sits inside this box).
+    this.physics.addCentered(0, 0.9, 0, 2.0, 1.8, 2.0, { blocksSight: false });
 
     const pivot = new THREE.Group();
     pivot.name = 'Pivot';
@@ -789,7 +790,8 @@ export class Level2 extends Level {
       const d = Math.hypot(player.position.x - pad.pos.x, player.position.z - pad.pos.z);
       if (d < 0.85 && player.body.grounded && player.position.y < 0.3 && pad.cooldown === 0) {
         pad.cooldown = 0.6;
-        player.body.velocity.set(pad.dir.x * 4.6, 13.6, pad.dir.z * 4.6);
+        // Enough to clear the catwalk edge even if the player lets go of the keys mid-air.
+        player.body.velocity.set(pad.dir.x * 5.6, 14.6, pad.dir.z * 5.6);
         player.launchTimer = 1.0;
         player.thrust = 1.2;
         audio.play('boost');
@@ -826,8 +828,10 @@ export class Level2 extends Level {
     const game = this.game;
     const player = game.player;
     const speed = 0.5 * settings.difficulty.beamSpeed * (1 + this.progress * 0.12);
-    if (this.turretCooldown > 0) this.turretCooldown -= dt;
-    else this.beamAngle += dt * speed;
+    // The beam keeps sweeping after a zap (detection is off while it cools
+    // down), so one pass over the player costs at most one zap.
+    this.turretCooldown = Math.max(0, this.turretCooldown - dt);
+    this.beamAngle += dt * speed;
     this.turretPivot.rotation.y = -this.beamAngle;
 
     // Detection: inside the wedge, on the floor, with clear line of sight.
@@ -859,7 +863,7 @@ export class Level2 extends Level {
 
     if (this.detection >= 1) {
       this.detection = 0;
-      this.turretCooldown = 1.2;
+      this.turretCooldown = 1.6;
       audio.play('alarm', { position: _eye.set(0, 1.75, 0), volume: 0.7 });
       audio.play('zap');
       if (player.damage(25, _eye.set(0, 0, 0), 8, 'Neutralised by the security sentry')) {
