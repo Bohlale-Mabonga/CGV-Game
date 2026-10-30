@@ -14,6 +14,13 @@ const _camDir = new THREE.Vector3();
 const _desired = new THREE.Vector3();
 const _lookTarget = new THREE.Vector3();
 const _euler = new THREE.Euler(0, 0, 0, 'YXZ');
+const _shotMatrix = new THREE.Matrix4();
+const _shotQuat = new THREE.Quaternion();
+const _up = new THREE.Vector3(0, 1, 0);
+
+function lerpFov(fov, shotFov, weight) {
+  return shotFov ? THREE.MathUtils.lerp(fov, shotFov, weight) : fov;
+}
 
 export class Player {
   constructor(game, camera) {
@@ -41,6 +48,9 @@ export class Player {
     this.invulnerable = 0;
     this.hurtTimer = 0;
     this.frozen = false;
+    this.shot = null; // cutscene camera { position, target, weight, fov } blended over the gameplay view
+    this.shotShown = false;
+    this.drive = null; // scripted movement { x, z, speed } (cutscenes roll SPARK into place)
     this.trauma = 0; // camera shake amount, decays over time
     this.stepDistance = 0;
     this.bobPhase = 0;
@@ -228,16 +238,17 @@ export class Player {
       if (input.isDown('right')) _wish.add(_right);
       if (input.isDown('left')) _wish.sub(_right);
     }
+    if (this.drive) _wish.set(this.drive.x, 0, this.drive.z);
     const hasInput = _wish.lengthSq() > 0;
     if (hasInput) _wish.normalize();
 
-    const sprinting = hasInput && input.isDown('sprint') && !this.crouching && this.stamina > 1 && !this.exhausted;
+    const sprinting = hasInput && !this.drive && input.isDown('sprint') && !this.crouching && this.stamina > 1 && !this.exhausted;
     if (sprinting) this.stamina = Math.max(0, this.stamina - 30 * dt);
     else this.stamina = Math.min(100, this.stamina + (body.grounded ? 22 : 10) * dt);
     if (this.stamina <= 1) this.exhausted = true;
     if (this.exhausted && this.stamina > 30) this.exhausted = false;
 
-    const speed = this.crouching ? 2.1 : sprinting ? 7.0 : 4.3;
+    const speed = this.drive ? this.drive.speed : this.crouching ? 2.1 : sprinting ? 7.0 : 4.3;
     this.launchTimer = Math.max(0, this.launchTimer - dt);
     const accel = body.grounded ? 16 : this.launchTimer > 0 ? 0.6 : 5;
     const k = 1 - Math.exp(-accel * dt);
@@ -380,13 +391,39 @@ export class Player {
       cam.lookAt(_lookTarget);
     }
 
+    // Cutscene shot: blend from the gameplay camera into the scripted one. SPARK
+    // is only drawn once the camera has left its head.
+    const shotWeight = this.shot?.weight ?? 0;
+    if (shotWeight > 0.001) this.applyShot(this.shot, shotWeight);
+    else if (this.shotShown) this.endShot();
+    this.fillLight.intensity = 1.2 - shotWeight * 0.7; // it sits just above the head: far too hot for a close-up
+
     // Sprint FOV kick.
     const baseFov = settings.get('fov');
-    const targetFov = baseFov + (sprinting && motion ? 8 : 0);
+    const targetFov = lerpFov(baseFov + (sprinting && motion ? 8 : 0), this.shot?.fov, shotWeight);
     if (Math.abs(cam.fov - targetFov) > 0.05) {
       cam.fov = THREE.MathUtils.lerp(cam.fov, targetFov, 1 - Math.exp(-(dt || 1) * 6));
       cam.updateProjectionMatrix();
     }
+  }
+
+  applyShot(shot, weight) {
+    _shotMatrix.lookAt(shot.position, shot.target, _up);
+    _shotQuat.setFromRotationMatrix(_shotMatrix);
+    this.camera.position.lerp(shot.position, weight);
+    this.camera.quaternion.slerp(_shotQuat, weight);
+    if (weight > 0.15) {
+      this.robot.visible = true;
+      this.viewArms.visible = false;
+      this.shotShown = true;
+    } else if (this.shotShown) {
+      this.endShot();
+    }
+  }
+
+  endShot() {
+    this.shotShown = false;
+    this.setViewMode(this.viewMode, true);
   }
 
   updateFlashlight(dt) {

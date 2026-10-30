@@ -217,6 +217,7 @@ kbd {
 .intro-name { font-family: var(--head); font-weight: 900; font-size: clamp(40px, 7vw, 86px); letter-spacing: 0.12em; text-shadow: 0 0 30px rgba(55, 200, 255, 0.6); }
 .intro-verb { font-family: var(--head); letter-spacing: 1em; color: var(--cyan); margin: 4px 0 12px; }
 .intro-tag { font-size: 21px; color: var(--text); }
+.skip-hint { position: absolute; left: 50%; bottom: 4vh; transform: translateX(-50%); font-family: var(--head); font-size: 11px; letter-spacing: 0.3em; color: var(--muted); text-transform: uppercase; white-space: nowrap; }
 .intro-skip { position: absolute; bottom: 4vh; font-family: var(--head); font-size: 11px; letter-spacing: 0.3em; color: var(--muted); }
 @keyframes introIn { from { opacity: 0; letter-spacing: 0.4em; filter: blur(8px); } }
 

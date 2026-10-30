@@ -6,7 +6,8 @@
 //      ├─ Fork
 //      └─ Torso
 //         ├─ Backpack ─ NozzleL/R ─ FlameL/R (thruster flames)
-//         ├─ ShoulderL/R ─ ArmL/R ─ ForearmL/R ─ ClawL/R
+//         ├─ ShoulderL/R ─ ArmL/R ─ ForearmL/R ─ ClawL/R ─ FingerL/R±1
+//         ├─ Pouch (chest pocket for keycards, added at runtime)
 //         └─ Head (pitches with the camera) ─ Visor, Antenna ─ AntennaTip
 //
 // Every child is placed relative to its parent, so swinging a shoulder carries
@@ -14,6 +15,9 @@
 // and antenna. If the Blender-authored GLB is available, its meshes replace
 // these procedural ones but keep the same node names and therefore the same
 // animation code.
+//
+// On top of the locomotion pose, RobotRig has a scripted layer (`rig.fx`) that
+// robotActions.js drives for short cutscenes such as stowing a keycard.
 
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
@@ -118,7 +122,7 @@ export function buildProceduralRobot() {
     forearm.add(lower);
     const claw = group(`Claw${name}`, 0, -0.21, 0);
     for (const f of [-1, 1]) {
-      const finger = mesh(new THREE.BoxGeometry(0.025, 0.08, 0.04), M.metal);
+      const finger = mesh(new THREE.BoxGeometry(0.025, 0.08, 0.04), M.metal, `Finger${name}${f}`);
       finger.position.set(f * 0.028, -0.03, 0);
       finger.rotation.z = f * 0.25;
       claw.add(finger);
@@ -165,6 +169,64 @@ export function buildProceduralRobot() {
   return { root, materials: M };
 }
 
+// ---------------------------------------------------------------------------
+// Props added at runtime so the procedural robot and the Blender GLB share them.
+// Both are found again by name, so attaching twice (or cloning the model for
+// the menu scene) never duplicates them.
+// ---------------------------------------------------------------------------
+
+// A pouch on the chest where SPARK stows the keycards it picks up. Coloured
+// tabs poke out of the slit, one per stowed card.
+const POUCH_SLOT = new THREE.Vector3(-0.06, -0.057, -0.216); // torso space: top of the slit
+const CARD_COLORS = [0xff3344, 0x3a8bff, 0xffc83a];
+
+function attachPouch(torso) {
+  if (torso.getObjectByName('Pouch')) return;
+  const metal = new THREE.MeshStandardMaterial({ color: 0x39424d, roughness: 0.32, metalness: 0.85 });
+  const accent = new THREE.MeshStandardMaterial({ color: 0xff8a1f, roughness: 0.5, metalness: 0.1 });
+  const pouch = group('Pouch', POUCH_SLOT.x, POUCH_SLOT.y - 0.058, -0.19);
+  const body = mesh(new RoundedBoxGeometry(0.22, 0.1, 0.05, 2, 0.015), metal);
+  body.position.z = -0.025;
+  pouch.add(body);
+  const rim = mesh(new RoundedBoxGeometry(0.23, 0.016, 0.058, 2, 0.006), accent);
+  rim.position.set(0, 0.05, -0.026);
+  pouch.add(rim);
+  const slit = mesh(new THREE.BoxGeometry(0.17, 0.004, 0.02),
+    new THREE.MeshStandardMaterial({ color: 0x220a00, emissive: 0xff8a1f, emissiveIntensity: 1.2 }), 'PouchSlit');
+  slit.position.set(0, 0.0585, -0.026);
+  slit.castShadow = false;
+  pouch.add(slit);
+  CARD_COLORS.forEach((color, i) => {
+    const tab = mesh(new THREE.BoxGeometry(0.05, 0.05, 0.006),
+      new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.9, roughness: 0.3 }), `PouchTab${i}`);
+    tab.position.set((i - 1) * 0.06, 0.07, -0.026);
+    tab.rotation.x = -0.15;
+    tab.visible = false;
+    pouch.add(tab);
+  });
+  torso.add(pouch);
+}
+
+// The keycard SPARK is holding, parented to its right claw so it follows the
+// hand. It is pinched between the fingertips and hangs out past them.
+export const CARD_HOLD_SCALE = 0.5;
+export const CARD_HOLD_TIP = 0.12; // how far the card's far end reaches past the claw origin
+
+function attachHeldCard(claw) {
+  if (claw.getObjectByName('HeldCard')) return;
+  const card = mesh(new RoundedBoxGeometry(0.34, 0.22, 0.02, 2, 0.01),
+    new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.9, roughness: 0.3, metalness: 0.4 }), 'HeldCard');
+  const chip = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.06, 0.025),
+    new THREE.MeshStandardMaterial({ color: 0xffd36b, metalness: 1, roughness: 0.2 }));
+  chip.position.set(-0.08, 0.02, 0);
+  card.add(chip);
+  card.scale.setScalar(CARD_HOLD_SCALE);
+  card.rotation.y = Math.PI / 2; // thickness along the claw's x: pinched between the fingers
+  card.position.set(0, 0.055 - CARD_HOLD_TIP, 0); // far end at -TIP, the rest between the fingers
+  card.visible = false;
+  claw.add(card);
+}
+
 // Binds animation to a robot hierarchy (procedural or GLB) by node name.
 export class RobotRig {
   constructor(model, materials) {
@@ -174,6 +236,22 @@ export class RobotRig {
     this.reach = 0;
     this.thrust = 0;
     this.visorColor = new THREE.Color(0x37c8ff);
+    // Scripted layer (see robotActions.js): blended over the locomotion pose.
+    this.fx = {
+      weight: 0,             // 0 = locomotion only … 1 = scripted pose
+      lean: 0, twist: 0,     // torso pitch / yaw
+      headX: 0, headY: 0,    // extra head rotation
+      armWeight: 0,          // how strongly the right arm follows armTarget
+      armSpace: 'world',     // 'world' or 'torso' for armTarget
+      armTarget: new THREE.Vector3(),
+      armPole: new THREE.Vector3(0.7, -0.7, 0.3), // torso-space hint: which way the elbow points
+      reachTip: 0.04,        // how far past the claw origin the thing being placed reaches
+      viewPoint: new THREE.Vector3(), // world position of the camera: the held card turns its face to it
+      grip: 0,               // 0 = claw open … 1 = pinched
+      hover: 0               // metres SPARK floats above the ground (thrusters)
+    };
+    this.scripted = false;
+    this.headAdd = 0;
   }
 
   setModel(model, materials) {
@@ -184,8 +262,17 @@ export class RobotRig {
       chassis: find('Chassis'), wheel: find('Wheel'), torso: find('Torso'), head: find('Head'),
       shoulderL: find('ShoulderL'), shoulderR: find('ShoulderR'),
       forearmL: find('ForearmL'), forearmR: find('ForearmR'),
-      antenna: find('Antenna'), flameL: find('FlameL'), flameR: find('FlameR')
+      antenna: find('Antenna'), flameL: find('FlameL'), flameR: find('FlameR'),
+      armR: find('ArmR'), clawR: find('ClawR'), fingersR: [find('FingerR-1'), find('FingerR1')]
     };
+    attachPouch(this.n.torso);
+    attachHeldCard(this.n.clawR);
+    this.pouchSlit = model.getObjectByName('PouchSlit');
+    this.tabs = [0, 1, 2].map((i) => model.getObjectByName(`PouchTab${i}`));
+    this.heldCard = model.getObjectByName('HeldCard');
+    // Right-arm lengths for the IK: shoulder → elbow, elbow → claw origin.
+    this.armUpper = this.n.armR.position.clone().add(this.n.forearmR.position).length();
+    this.armLower = this.n.clawR.position.length();
     this.baseTorsoY = this.n.torso.position.y;
     // Find the emissive "visor" material, whichever model we are using.
     this.visorMaterials = [];
@@ -202,6 +289,8 @@ export class RobotRig {
     this.time += dt;
     const n = this.n;
     const t = this.time;
+    n.head.rotation.x -= this.headAdd; // undo last frame's scripted offset before easing from it
+    this.headAdd = 0;
 
     this.wheelAngle -= distance / 0.22;
     n.wheel.rotation.x = this.wheelAngle;
@@ -220,6 +309,7 @@ export class RobotRig {
     this.reach = Math.max(0, this.reach - dt * 2.5);
     const swing = Math.sin(t * 9) * 0.45 * moving;
     const air = grounded ? 0 : -0.8;
+    n.shoulderR.rotation.y = 0; // the scripted layer can leave a residue here
     n.shoulderL.rotation.x = swing + air;
     n.shoulderR.rotation.x = -swing + air - this.reach * 1.5;
     n.shoulderL.rotation.z = grounded ? 0.08 : 0.5;
@@ -233,6 +323,14 @@ export class RobotRig {
     n.flameR.scale.setScalar(flameScale);
     if (this.materials?.flame) this.materials.flame.uniforms.uTime.value = t;
 
+    // Scripted layer: only runs while an action (robotActions.js) is driving.
+    if (this.fx.weight > 0.001) {
+      this.scripted = true;
+      this.applyScripted();
+    } else if (this.scripted) {
+      this.releaseScripted();
+    }
+
     // Visor mood: cyan normally, amber when power is low, red when hurt.
     const target = hurt > 0 ? _red : lowPower ? _amber : _cyan;
     this.visorColor.lerp(target, 1 - Math.exp(-dt * 8));
@@ -242,7 +340,159 @@ export class RobotRig {
   triggerReach() {
     this.reach = 1;
   }
+
+  // ---------------------------------------------------------------- scripted --
+  // Poses the torso, head, claw and right arm from `this.fx`, on top of the
+  // locomotion pose that update() has just written.
+  applyScripted() {
+    const fx = this.fx;
+    const n = this.n;
+    const w = fx.weight;
+    n.torso.rotation.x = fx.lean * w;
+    n.torso.rotation.y = fx.twist * w;
+    this.headAdd = fx.headX * w;
+    n.head.rotation.x += this.headAdd;
+    n.head.rotation.y = fx.headY * w;
+    this.model.position.y += fx.hover * w;
+    // Claw: open fingers splay (±0.25 is the modelled rest), a closed grip pinches.
+    const spread = THREE.MathUtils.lerp(0.5, -0.03, fx.grip);
+    n.fingersR.forEach((finger, i) => {
+      const side = i === 0 ? -1 : 1;
+      finger.rotation.z = THREE.MathUtils.lerp(side * 0.25, side * spread, w);
+    });
+    if (fx.armWeight > 0.001) this.solveRightArm(fx.armWeight * w);
+    this.turnCardToView();
+  }
+
+  // Twists the claw about the forearm so the card pinched in it shows its face
+  // to the camera instead of its edge.
+  turnCardToView() {
+    const claw = this.n.clawR;
+    let twist = 0;
+    if (this.heldCard.visible) {
+      this.model.updateMatrixWorld(true);
+      claw.parent.worldToLocal(_target.copy(this.fx.viewPoint));
+      twist = Math.atan2(-_target.z, _target.x);
+      if (Math.abs(twist) > Math.PI / 2) twist += twist > 0 ? -Math.PI : Math.PI; // either face will do
+    }
+    claw.rotation.y = THREE.MathUtils.lerp(claw.rotation.y, twist, 0.3);
+  }
+
+  // Two-bone IK: points the right arm so the claw (plus `reachTip`) lands on
+  // fx.armTarget. The elbow sits in the plane of the target and the pole hint;
+  // the shoulder is aimed along the upper arm and twisted so the forearm folds
+  // forward, which is the only way the elbow hinges.
+  solveRightArm(weight) {
+    const fx = this.fx;
+    const n = this.n;
+    this.model.updateMatrixWorld(true);
+    _target.copy(fx.armTarget);
+    if (fx.armSpace === 'world') n.torso.worldToLocal(_target);
+    const shoulder = n.shoulderR.position;
+    const a = this.armUpper;
+    const b = this.armLower + fx.reachTip;
+    _toTarget.subVectors(_target, shoulder);
+    const d = THREE.MathUtils.clamp(_toTarget.length(), Math.abs(a - b) + 0.02, (a + b) * 0.985);
+    _dir.copy(_toTarget).normalize();
+    const along = (a * a - b * b + d * d) / (2 * d);
+    const height = Math.sqrt(Math.max(0, a * a - along * along));
+    _pole.copy(fx.armPole).addScaledVector(_dir, -fx.armPole.dot(_dir));
+    if (_pole.lengthSq() < 1e-6) _pole.set(0, -1, 0).addScaledVector(_dir, _dir.y);
+    _pole.normalize();
+    _elbow.copy(shoulder).addScaledVector(_dir, along).addScaledVector(_pole, height);
+    _upper.subVectors(_elbow, shoulder).divideScalar(a);
+    _hand.copy(shoulder).addScaledVector(_dir, d);
+    _fore.subVectors(_hand, _elbow).divideScalar(b);
+    const bend = Math.acos(THREE.MathUtils.clamp(_upper.dot(_fore), -1, 1));
+    _fold.copy(_fore).addScaledVector(_upper, -_upper.dot(_fore));
+    if (_fold.lengthSq() < 1e-6) _fold.copy(_pole).negate();
+    _fold.normalize();
+    _side.crossVectors(_upper, _fold);
+    _basis.makeBasis(_upper, _fold, _side);
+    _qAim.setFromRotationMatrix(_basis).multiply(ARM_REST_INVERSE);
+    n.shoulderR.quaternion.slerp(_qAim, weight);
+    n.forearmR.rotation.x = THREE.MathUtils.lerp(n.forearmR.rotation.x, bend, weight);
+  }
+
+  // Puts everything the scripted layer touched back the way locomotion expects.
+  releaseScripted() {
+    const n = this.n;
+    this.scripted = false;
+    n.torso.rotation.set(0, 0, 0);
+    n.head.rotation.y = 0;
+    n.shoulderR.rotation.y = 0;
+    n.clawR.rotation.y = 0;
+    n.fingersR[0].rotation.z = -0.25;
+    n.fingersR[1].rotation.z = 0.25;
+    this.heldCard.visible = false;
+    this.setPouchGlow(0);
+  }
+
+  // Shows the keycard in SPARK's claw (hex colour), or hides it (null).
+  holdCard(color) {
+    this.heldCard.visible = color !== null;
+    if (color !== null) {
+      this.heldCard.material.color.set(color);
+      this.heldCard.material.emissive.set(color);
+    }
+  }
+
+  // One more coloured tab pokes out of the pouch.
+  stowCard(color) {
+    const tab = this.tabs.find((t) => !t.visible);
+    if (!tab) return;
+    tab.material.color.set(color);
+    tab.material.emissive.set(color);
+    tab.visible = true;
+  }
+
+  // The tab for this card disappears (the card is on its way to the claw).
+  takeCard(color) {
+    const tab = this.tabs.find((t) => t.visible && t.material.color.getHex() === color)
+      ?? this.tabs.slice().reverse().find((t) => t.visible);
+    if (tab) tab.visible = false;
+  }
+
+  clearPouch() {
+    for (const tab of this.tabs) tab.visible = false;
+    this.heldCard.visible = false;
+  }
+
+  // Slit glow: 0 = idle, 1 = flaring as a card goes in or out.
+  setPouchGlow(amount) {
+    if (this.pouchSlit) this.pouchSlit.material.emissiveIntensity = 1.2 + amount * 5;
+  }
+
+  pouchWorld(out) {
+    return this.n.torso.localToWorld(out.copy(POUCH_SLOT));
+  }
+
+  // Where the claw's pinch point is, in world space.
+  clawWorld(out, tip = 0.04) {
+    this.model.updateMatrixWorld(true);
+    return this.n.clawR.localToWorld(out.set(0, -tip, 0));
+  }
 }
+
+const _target = new THREE.Vector3();
+const _toTarget = new THREE.Vector3();
+const _dir = new THREE.Vector3();
+const _pole = new THREE.Vector3();
+const _elbow = new THREE.Vector3();
+const _upper = new THREE.Vector3();
+const _hand = new THREE.Vector3();
+const _fore = new THREE.Vector3();
+const _fold = new THREE.Vector3();
+const _side = new THREE.Vector3();
+const _basis = new THREE.Matrix4();
+const _qAim = new THREE.Quaternion();
+// Rest frame of the arm: it points along -Y and folds towards -Z. Multiplying a
+// quaternion built from the wanted frame by this inverse gives the rotation of
+// the shoulder.
+const ARM_REST_INVERSE = new THREE.Quaternion()
+  .setFromRotationMatrix(new THREE.Matrix4().makeBasis(
+    new THREE.Vector3(0, -1, 0), new THREE.Vector3(0, 0, -1), new THREE.Vector3(1, 0, 0)))
+  .invert();
 
 const _red = new THREE.Color(0xff2a2a);
 const _amber = new THREE.Color(0xffb020);

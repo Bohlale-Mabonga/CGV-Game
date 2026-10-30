@@ -462,22 +462,25 @@ export class Level1 extends Level {
     this.exitDoor = new Door(this, { x: 0, z: -43, width: 3.8, height: 3.2, locked: true, color: 0xff8a3a, label: 'REACTOR ACCESS' });
     this.coolantDoor = new Door(this, { x: -13, z: -38, width: 3.6, height: 3.0, rotationY: Math.PI / 2, locked: true, label: 'COOLANT PUMPS' });
 
-    // Card reader with three slots beside the exit door.
+    // Card reader with three slots beside the exit door. It is mounted at waist
+    // height so SPARK, which is short, can reach every slot to swipe its cards.
     const reader = new THREE.Group();
-    reader.position.set(3.0, 1.35, -41.8);
+    reader.position.set(3.0, 0.95, -41.8);
     reader.add(new THREE.Mesh(new RoundedBoxGeometry(0.8, 1.0, 0.2, 2, 0.04), this.mat.dark));
     this.slotMats = [];
-    const slotColors = [0xff3344, 0x3a8bff, 0xffc83a];
+    this.slotCenters = [];
+    const slotColors = [0xff3344, 0x3a8bff, 0xffc83a]; // top to bottom: the order the cards are swiped in
     for (let i = 0; i < 3; i++) {
       const m = emissive(0x333333, 0.3);
       const slot = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 0.05), m);
-      slot.position.set(0, 0.3 - i * 0.28, 0.11);
+      slot.position.set(0, 0.2 - i * 0.2, 0.11);
       reader.add(slot);
       this.slotMats.push({ m, color: slotColors[i] });
+      this.slotCenters.push(new THREE.Vector3(reader.position.x, reader.position.y + slot.position.y, reader.position.z + 0.135));
     }
     this.add(reader);
     this.addInteractable({
-      position: new THREE.Vector3(1.5, 1.3, -41.6),
+      position: new THREE.Vector3(1.5, 1.1, -41.6),
       radius: 2.6,
       prompt: () => {
         const n = this.collectedCount();
@@ -652,19 +655,34 @@ export class Level1 extends Level {
       return;
     }
     this.exitOpen = true;
+    // SPARK takes the cards out of its pouch and swipes them in slot order; the
+    // slots light up as each one is read and the door opens after the last.
+    const played = this.game.playCardUpload({
+      cards: this.slotMats.map((s, i) => ({ slot: this.slotCenters[i], color: s.color })),
+      stand: new THREE.Vector3(3.0, 0, -41.0),
+      yaw: Math.PI / 2, // right shoulder towards the reader
+      reader: { out: new THREE.Vector3(0, 0, 1), along: new THREE.Vector3(1, 0, 0) },
+      lookAtAfter: new THREE.Vector3(0, 1.6, -43),
+      onInsert: (i) => this.lightSlot(i),
+      onDone: () => this.openExit()
+    });
+    if (played) return;
     this.game.player.rig.triggerReach();
-    this.slotMats.forEach((s, i) => {
-      this.after(0.25 * (i + 1), () => {
-        s.m.emissive.set(s.color);
-        s.m.emissiveIntensity = 4;
-        audio.play('beep', { pitch: 1 + i * 0.25 });
-      });
-    });
-    this.after(1.1, () => {
-      this.exitDoor.open();
-      this.game.say('Access granted. Take the service lift down to the control room.');
-      this.objective = 'Take the service lift down';
-    });
+    this.slotMats.forEach((s, i) => this.after(0.25 * (i + 1), () => this.lightSlot(i)));
+    this.after(1.1, () => this.openExit());
+  }
+
+  lightSlot(i) {
+    const s = this.slotMats[i];
+    s.m.emissive.set(s.color);
+    s.m.emissiveIntensity = 4;
+    audio.play('beep', { pitch: 1 + i * 0.25 });
+  }
+
+  openExit() {
+    this.exitDoor.open();
+    this.game.say('Access granted. Take the service lift down to the control room.');
+    this.objective = 'Take the service lift down';
   }
 
   openKeypad() {
