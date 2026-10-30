@@ -516,6 +516,7 @@ export class Level3 extends Level {
     this.game.ui.toast(`Stabiliser online (${this.pylonsOnline}/3)`, '#37c8ff');
     this.checkpoint.position.copy(this.game.player.position);
     this.checkpoint.yaw = this.game.player.yaw;
+    this.flareTimer = Math.max(this.flareTimer, 2.5); // a breather to climb down
     if (this.pylonsOnline === 1) this.game.say('Stabiliser one holding. The core is fighting back — watch for plasma flares!');
     if (this.pylonsOnline === 2) this.game.say('Two of three. Containment rising.');
     if (this.pylonsOnline === 3) {
@@ -819,8 +820,10 @@ export class Level3 extends Level {
     // Plasma flares while the pylons are being activated.
     if (this.inChamber && !this.sealed) {
       this.flareTimer -= dt;
+      // No new flare while a stabiliser is being held: dodge first, then activate.
+      if (game.holdProgress > 0) this.flareTimer = Math.max(this.flareTimer, 0.8);
       if (this.flareTimer <= 0) {
-        this.flareTimer = Math.max(1.6, 3.6 - this.pylonsOnline * 0.6) * (0.8 + Math.random() * 0.4);
+        this.flareTimer = Math.max(2.6, 4.4 - this.pylonsOnline * 0.5) * (0.85 + Math.random() * 0.3) / settings.difficulty.beamSpeed;
         const f = this.flares.find((k) => k.state === 'idle');
         if (f) {
           f.state = 'warn';
@@ -838,7 +841,7 @@ export class Level3 extends Level {
       f.colMat.uniforms.uTime.value = t;
       if (f.state === 'warn') {
         f.warn.material.opacity = 0.4 + 0.5 * Math.abs(Math.sin(f.t * 12));
-        if (f.t > 1.1) {
+        if (f.t > 1.4 / settings.difficulty.beamSpeed) {
           f.state = 'fire';
           f.t = 0;
           f.column.visible = true;
@@ -849,7 +852,7 @@ export class Level3 extends Level {
       } else if (f.state === 'fire') {
         f.colMat.uniforms.uIntensity.value = Math.sin(Math.min(1, f.t / 0.7) * Math.PI);
         const d = Math.hypot(p.x - f.pos.x, p.z - f.pos.z);
-        if (d < 1.5 && f.t < 0.6) player.damage(28, f.pos, 7, 'Engulfed by a plasma flare');
+        if (d < 1.5 && f.t < 0.6) player.damage(20, f.pos, 7, 'Engulfed by a plasma flare');
         if (f.t > 0.7) {
           f.state = 'idle';
           f.warn.visible = false;

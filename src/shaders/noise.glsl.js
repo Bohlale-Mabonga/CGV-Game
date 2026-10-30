@@ -49,7 +49,7 @@ float snoise(vec3 v) {
   return 42.0 * dot(m * m, vec4(dot(p0, x0), dot(p1, x1), dot(p2, x2), dot(p3, x3)));
 }
 
-// Fractal Brownian motion: four octaves of simplex noise, remapped to [0,1].
+
 float fbm(vec3 p) {
   float f = 0.0;
   float a = 0.5;

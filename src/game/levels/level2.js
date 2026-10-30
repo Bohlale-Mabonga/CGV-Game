@@ -216,11 +216,33 @@ export class Level2 extends Level {
     edge.rotation.x = Math.PI / 2;
     edge.position.y = CATWALK_Y + 0.02;
     this.add(edge);
-    const rail = new THREE.Mesh(new THREE.TorusGeometry(CATWALK_IN + 0.1, 0.04, 6, 128), this.mat.dark);
-    rail.rotation.x = Math.PI / 2;
-    rail.position.y = CATWALK_Y + 1.0;
-    this.add(rail);
     physics.addRing(0, 0, CATWALK_IN, R + 0.1, CATWALK_Y - 0.15, CATWALK_Y, {});
+    // Solid railing with openings where the stairs and the jump pads arrive.
+    const railGaps = [
+      { angle: Math.atan2(5.5, 11.6), half: 0.11 },
+      { angle: Math.atan2(5.5, -11.6), half: 0.11 },
+      { angle: Math.PI * 0.62, half: 0.12 },
+      { angle: Math.PI * 0.38, half: 0.12 }
+    ];
+    // Taller than the visible rail so it cannot be hopped over.
+    physics.addRing(0, 0, CATWALK_IN, CATWALK_IN + 0.2, CATWALK_Y, CATWALK_Y + 2.5, { gaps: railGaps, blocksSight: false });
+    const sorted = railGaps.map((g) => [g.angle - g.half, g.angle + g.half]).sort((a, b) => a[0] - b[0]);
+    sorted.forEach(([, end], i) => {
+      const next = i + 1 < sorted.length ? sorted[i + 1][0] : sorted[0][0] + Math.PI * 2;
+      const arc = next - end;
+      for (const h of [1.0, 0.55]) {
+        const bar = new THREE.Mesh(new THREE.TorusGeometry(CATWALK_IN + 0.1, h === 1.0 ? 0.04 : 0.025, 6, Math.ceil(arc * 20), arc), this.mat.dark);
+        bar.rotation.set(Math.PI / 2, 0, end);
+        bar.position.y = CATWALK_Y + h;
+        this.addStaticMesh(bar);
+      }
+      // Posts along the segment, one at each end.
+      const posts = Math.max(2, Math.round(arc * (CATWALK_IN + 0.1) / 2.5) + 1);
+      for (let k = 0; k < posts; k++) {
+        const a = end + (arc * k) / (posts - 1);
+        this.box(0.06, 1.0, 0.06, Math.cos(a) * (CATWALK_IN + 0.1), CATWALK_Y + 0.5, Math.sin(a) * (CATWALK_IN + 0.1), this.mat.dark, { collide: false, tile: 1 });
+      }
+    });
     // Support columns under the catwalk.
     for (let i = 0; i < 16; i++) {
       const a = (i / 16) * Math.PI * 2 + 0.2;
@@ -831,6 +853,8 @@ export class Level2 extends Level {
     // The beam keeps sweeping after a zap (detection is off while it cools
     // down), so one pass over the player costs at most one zap.
     this.turretCooldown = Math.max(0, this.turretCooldown - dt);
+    // No zaps while a terminal is open (diagnostic, grid), plus a moment's grace after closing it.
+    if (game.state !== 'playing') this.turretCooldown = Math.max(this.turretCooldown, 1.0);
     this.beamAngle += dt * speed;
     this.turretPivot.rotation.y = -this.beamAngle;
 
