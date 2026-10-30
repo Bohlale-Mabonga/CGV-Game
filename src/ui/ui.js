@@ -27,7 +27,7 @@ export { fmtTime };
 const CONTROLS = [
   ['W A S D', 'Move'],
   ['Mouse', 'Look'],
-  ['Space', 'Jump (×2 in mid-air: thrusters, Level 3)'],
+  ['Space', 'Jump (×2 in mid-air: thrusters, Level 3) · skips SPARK\'s short scenes'],
   ['Shift', 'Sprint (uses stamina)'],
   ['C / Ctrl', 'Crouch'],
   ['E / Left click', 'Interact (hold for some objects)'],
@@ -50,7 +50,7 @@ export class UI {
       loading: $('#loading'), loadBar: $('#load-bar'), loadText: $('#load-text'),
       menu: $('#menu'), hud: $('#hud'), pause: $('#pause'),
       panel: $('#panel'), panelBody: $('#panel-body'), panelTitle: $('#panel-title'),
-      intro: $('#intro'), result: $('#result'), modal: $('#modal'),
+      intro: $('#intro'), result: $('#result'), modal: $('#modal'), skipHint: $('#skip-hint'),
       objective: $('#objective-text'), timer: $('#timer'), timerValue: $('#timer-value'),
       integrity: $('#bar-integrity'), stamina: $('#bar-stamina'), battery: $('#bar-battery'),
       integrityVal: $('#val-integrity'), batteryWrap: $('#vital-battery'), flashIcon: $('#flash-state'),
@@ -255,6 +255,11 @@ export class UI {
   // -------------------------------------------------------------------- HUD --
   showHud(visible) {
     this.el.hud.classList.toggle('hidden', !visible);
+  }
+
+  // "Press Space to skip" shown over a scripted scene (the HUD is hidden then).
+  showSkipHint(visible) {
+    this.el.skipHint.classList.toggle('hidden', !visible);
   }
 
   setLevelTag(meta) {
@@ -939,6 +944,8 @@ const TEMPLATE = /* html */ `
   <div id="fps" class="fps hidden"></div>
   <div id="scan-layer" class="scan-layer hidden"></div>
 </div>
+
+<div id="skip-hint" class="skip-hint hidden">Press Space to skip</div>
 
 <div id="intro" class="screen intro hidden"></div>
 <div id="result" class="screen result hidden"></div>

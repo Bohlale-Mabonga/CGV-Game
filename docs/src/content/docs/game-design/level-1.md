@@ -25,6 +25,7 @@ Find the three reactor keycards (red, blue, gold), insert them at the card reade
 
 - **Flashlight:** a SpotLight that casts shadows, mounted at the robot's head and pointing where you look. Its battery drains while on (0.9 %/s) and recharges while off; it flickers when low. Batteries are also scattered around.
 - **UV ink:** the coolant door code is random each run. A custom shader draws it only where the flashlight cone actually falls (see [Shaders](/technical/shaders/)).
+- **Keycards:** picking one up plays a short scene: the card is pulled out of its projector into SPARK's claw and tucked into a pouch on its chest. At the card reader, SPARK takes the cards back out and swipes them through the red, blue and gold slots in order before the door opens. Space skips either scene.
 - **Keypad:** a mouse-driven popup. A wrong code shakes and buzzes.
 - **Steam vents:** cycle idle → 1 s warning hiss and orange glow → scalding burst. In the Coolant Pumps the rows fire in a rolling wave, but the green-lit gaps and the strips between rows are always safe; confident players can time a straight dash instead.
 - **Scanner (Q):** a pulse that reveals keycards, logs and pickups through walls.

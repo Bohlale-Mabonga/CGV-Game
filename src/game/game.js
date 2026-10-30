@@ -9,6 +9,7 @@ import { settings, progress } from '../engine/settings.js';
 import { textures } from '../engine/textures.js';
 import { Player } from './player.js';
 import { buildProceduralRobot, RobotRig, loadRobotModel } from './robot.js';
+import { CardPickupAction, CardUploadAction } from './robotActions.js';
 import { Level1 } from './levels/level1.js';
 import { Level2 } from './levels/level2.js';
 import { Level3 } from './levels/level3.js';
@@ -48,6 +49,7 @@ export class Game {
     this.runStats = [];
     this.fxState = { damage: 0, glitch: 0, fade: 0, letterbox: 0, scan: 0 };
     this.tweens = [];
+    this.action = null;
     this.scanCooldown = 0;
     this.scanTime = 0;
     this.hintKey = null;
@@ -401,6 +403,7 @@ export class Game {
     p.spawn(level.checkpoint.position, level.checkpoint.yaw);
     this.ui.setAbilities(index === 2 ? ['THRUSTERS'] : []);
     this.ui.setKeycards(null);
+    p.rig.clearPouch();
     this.ui.setLevelTag(LevelClass.meta);
 
     const fx = LEVEL_FX[index];
@@ -725,6 +728,60 @@ export class Game {
     }
   }
 
+  // --------------------------------------------------------------- actions --
+  // A short scripted scene starring SPARK (robotActions.js). Gameplay input is
+  // frozen and the HUD hidden while it plays; the level keeps running. Returns
+  // false when a scene cannot play right now, so callers can fall back.
+  runAction(action) {
+    if (this.state !== 'playing') return false;
+    this.action = action;
+    this.state = 'action';
+    this.player.frozen = true;
+    this.ui.setPrompt(null);
+    this.ui.showHud(false);
+    this.ui.showSkipHint(true);
+    this.fxState.letterbox = 1;
+    action.start();
+    return true;
+  }
+
+  updateAction(dt) {
+    const action = this.action;
+    const input = this.input;
+    // Space skips ahead (not in the first half-second, so a press made just
+    // before the scene started cannot skip it).
+    if (action.time > 0.5 && input.wasPressed('jump')) action.skip();
+    action.tick(dt);
+    this.player.update(dt);
+    this.level.update(dt);
+    if (action.done) this.endAction();
+  }
+
+  endAction() {
+    this.action.finish();
+    this.action = null;
+    this.state = 'playing';
+    this.player.frozen = false;
+    this.player.invulnerable = Math.max(this.player.invulnerable, 0.6);
+    this.fxState.letterbox = 0;
+    this.ui.showHud(true);
+    this.ui.showSkipHint(false);
+    if (!this.input.locked) {
+      this.input.requestLock();
+      setTimeout(() => {
+        if (this.state === 'playing' && !this.input.locked) this.ui.showResume(true);
+      }, 1400);
+    }
+  }
+
+  playCardPickup(keycard) {
+    return this.runAction(new CardPickupAction(this, keycard));
+  }
+
+  playCardUpload(options) {
+    return this.runAction(new CardUploadAction(this, options));
+  }
+
   // ------------------------------------------------------------ gameplay --
   updateInteraction(dt) {
     const player = this.player;
@@ -873,6 +930,9 @@ export class Game {
         break;
       case 'playing':
         this.updatePlaying(dt);
+        break;
+      case 'action':
+        this.updateAction(dt);
         break;
       case 'modal':
         // The world keeps running while a console is open (the clock is ticking).

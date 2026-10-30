@@ -9,7 +9,7 @@ title: Controls
 | Click the game window | Locks the mouse pointer (needed for mouse look) |
 | W A S D / arrow keys | Move |
 | Mouse | Look around |
-| Space | Jump. In Level 3, press it again in mid-air for the thruster double-jump |
+| Space | Jump. In Level 3, press it again in mid-air for the thruster double-jump. It also skips SPARK's short scenes (stowing a keycard, swiping the cards at the reader) |
 | Shift | Sprint (uses stamina) |
 | C / Ctrl | Crouch (to get under steam leaks) |
 | E / left click | Interact. Some objects need you to hold it (junctions, pylons, the core seal) |

@@ -184,16 +184,42 @@ export class Keycard {
     if (this.collected) return;
     this.collected = true;
     this.collectTime = 0;
+    // SPARK plays a short pickup scene (the card is pulled into its claw and
+    // tucked into its pouch) and the scene calls onCollect when it is stowed.
+    // When no scene can play (e.g. the trailer), the card just flies up.
+    if (this.level.game.playCardPickup(this)) {
+      this.scripted = true;
+      return;
+    }
     audio.play('keycard');
     this.level.game.player.rig.triggerReach();
     this.onCollect?.(this);
   }
 
+  // Scripted pickup: the card is driven from outside once it is pulled free.
+  placeCard(worldPosition, scale) {
+    this.card.position.copy(this.group.worldToLocal(_v.copy(worldPosition)));
+    this.card.scale.setScalar(scale);
+  }
+
+  finishPull() {
+    this.group.visible = false;
+  }
+
   update(dt, t) {
     this.holo.uniforms.uTime.value = t;
-    if (!this.collected) {
+    if (!this.collected || (this.scripted && !this.pulled)) {
       this.card.rotation.y += dt * 1.6;
       this.card.position.y = 0.9 + Math.sin(t * 2) * 0.06;
+      return;
+    }
+    if (this.scripted) {
+      // The projector beam dies out as the card is pulled free.
+      this.collectTime = Math.min(1, this.collectTime + dt * 2);
+      const s = Math.max(0.001, 1 - this.collectTime);
+      this.beam.scale.set(s, 1, s);
+      this.holo.uniforms.uOpacity.value = s * 0.6;
+      this.card.rotation.y += dt * 8;
       return;
     }
     // Fly up and shrink into the player.
